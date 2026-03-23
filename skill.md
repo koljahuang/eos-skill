@@ -30,10 +30,11 @@ Ask the user for the following information if not already provided:
    - `lambda` - Lambda functions (runtime deprecation)
    - `amazonmq` - Amazon MQ brokers (ActiveMQ, RabbitMQ)
    - Default: scan all types
-5. **Cross-account Role Name** (optional): IAM role name for assuming into target accounts
+5. **Output file path** (required): Where to save the Excel report
+   - e.g., `~/Desktop/eos_report.xlsx`, `/tmp/reports/eos_report.xlsx`
+   - Default if not specified: `eos_report_<timestamp>.xlsx` in current directory
+6. **Cross-account Role Name** (optional): IAM role name for assuming into target accounts
    - Default: `OrganizationAccountAccessRole`
-6. **Output file path** (optional): Where to save the Excel report
-   - Default: `eos_report_<timestamp>.xlsx`
 
 ### Step 2: Verify Prerequisites
 
