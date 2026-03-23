@@ -20,28 +20,36 @@
 
 ## 安装
 
-### 通过 Claude Code 安装 Skill
+### 通过 npx 安装
 
 ```bash
-# 安装 skill 到 kiro 目录
-npx claude-code skill add --path kiro https://github.com/koljahuang/eos-skill.git
+npx skills add https://github.com/koljahuang/eos-skill.git
 ```
+
+出现提示时，选择 agent 目录：
+
+```
+── Additional agents ──────────────────────────────
+❯ ● Kiro CLI (.kiro/skills)
+```
+
+Skill 将安装到 `.kiro/skills/eos-skill/` 目录。
 
 ### 手动安装
 
 ```bash
-# 克隆到 kiro 目录
-git clone https://github.com/koljahuang/eos-skill.git kiro
+# 克隆到 .kiro/skills 目录
+mkdir -p .kiro/skills
+git clone https://github.com/koljahuang/eos-skill.git .kiro/skills/eos-skill
 
 # 安装依赖
-cd kiro
 pip install boto3 openpyxl
 ```
 
 ### 在 Kiro 中使用
 
 1. 打开 Kiro IDE
-2. 打开 `kiro/` skill 目录作为工作区
+2. Skill 会自动从 `.kiro/skills/eos-skill/` 加载
 3. 在对话中输入 `eos report` 开始扫描
 
 ## 使用方式
