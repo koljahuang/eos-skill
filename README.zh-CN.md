@@ -1,0 +1,156 @@
+[English](README.md) | [中文](README.zh-CN.md)
+
+# EOS Skill - AWS 停止支持资源扫描器
+
+扫描 AWS 资源（RDS、ElastiCache、EKS）的停止支持（EOS）状态，生成 Excel 升级报告。
+
+## 功能
+
+- 扫描 RDS 实例和 Aurora 集群（MySQL、PostgreSQL、MariaDB）
+- 扫描 ElastiCache 集群（Redis、Memcached）
+- 扫描 EKS Kubernetes 集群
+- 颜色编码 Excel 报告（红色=已过期，黄色=即将过期，绿色=安全）
+- 双语表头（英文 + 中文）
+- 通过 IAM 角色跨账号扫描
+
+## 前置要求
+
+```bash
+pip install boto3 openpyxl
+```
+
+## 使用方式
+
+### 方式一：Claude Code Skill 调用
+
+在 Claude Code 对话中输入：
+
+```
+eos report
+```
+
+Claude 会询问以下信息：
+1. AWS 认证方式（profile 或 AK/SK）
+2. 账号 ID
+3. 区域
+4. 资源类型
+
+### 方式二：命令行直接运行
+
+#### 基础用法 - 单区域
+
+```bash
+python -m eos_skill.main \
+  --profile my-profile \
+  --accounts 123456789012 \
+  --regions us-west-2
+```
+
+#### 多区域扫描
+
+```bash
+python -m eos_skill.main \
+  --profile my-profile \
+  --accounts 123456789012 \
+  --regions us-west-2 us-west-1 ap-northeast-1
+```
+
+#### 多账号 + 多区域
+
+```bash
+python -m eos_skill.main \
+  --profile my-profile \
+  --accounts 123456789012 987654321098 \
+  --regions us-west-2 us-east-1 ap-northeast-1
+```
+
+#### 指定输出路径
+
+```bash
+# 输出到桌面
+python -m eos_skill.main \
+  --profile my-profile \
+  --accounts 123456789012 \
+  --regions us-west-2 \
+  --output ~/Desktop/eos_report.xlsx
+
+# 输出到指定目录
+python -m eos_skill.main \
+  --profile my-profile \
+  --accounts 123456789012 \
+  --regions us-west-2 us-west-1 \
+  --output /tmp/reports/eos_report_prod.xlsx
+```
+
+#### 只扫描特定资源类型
+
+```bash
+# 仅扫描 RDS 和 EKS
+python -m eos_skill.main \
+  --profile my-profile \
+  --accounts 123456789012 \
+  --regions us-west-2 \
+  --resource-types rds eks
+
+# 仅扫描 ElastiCache
+python -m eos_skill.main \
+  --profile my-profile \
+  --accounts 123456789012 \
+  --regions us-west-2 \
+  --resource-types elasticache
+```
+
+#### 使用 AK/SK 认证
+
+```bash
+python -m eos_skill.main \
+  --access-key AKIAXXXXXXXX \
+  --secret-key XXXXXXXXXXXXXXXX \
+  --accounts 123456789012 \
+  --regions us-west-2 us-west-1 \
+  --output ~/Desktop/eos_report.xlsx
+```
+
+#### 跨账号自定义角色名
+
+```bash
+python -m eos_skill.main \
+  --profile my-profile \
+  --accounts 123456789012 987654321098 \
+  --regions us-west-2 \
+  --role-name MyCustomCrossAccountRole
+```
+
+## 全部参数
+
+| 参数 | 必填 | 说明 |
+|------|------|------|
+| `--accounts` | 是 | AWS 账号 ID（支持多个，空格分隔） |
+| `--regions` | 是 | AWS 区域（支持多个，空格分隔） |
+| `--profile` | 否 | AWS CLI 配置名 |
+| `--access-key` | 否 | AWS Access Key ID（需配合 `--secret-key`） |
+| `--secret-key` | 否 | AWS Secret Access Key（需配合 `--access-key`） |
+| `--resource-types` | 否 | `rds`、`elasticache`、`eks`（默认扫描全部） |
+| `--role-name` | 否 | 跨账号 IAM 角色名（默认: `OrganizationAccountAccessRole`） |
+| `--output` | 否 | 输出文件路径（默认: `eos_report_<timestamp>.xlsx`） |
+
+## 报告字段
+
+| # | 字段名称 | 说明 |
+|---|---------|------|
+| 1 | Account (账号) | 资源所属 AWS 账号 |
+| 2 | Region (区域) | 资源物理区域 |
+| 3 | Cluster/Instance Name (集群/实例名称) | 数据库或集群的唯一标识 |
+| 4 | Engine (引擎) | MySQL、PostgreSQL、Redis 等 |
+| 5 | Resource Type (资源类型) | RDS、Aurora、ElastiCache、EKS |
+| 6 | Instance Type (实例类型) | 当前规格（如 db.t3.medium） |
+| 7 | Engine Version (引擎版本) | 当前运行的版本号 |
+| 8 | End of Support Date (停止支持日期) | 官方停止维护的最后期限 |
+| 9 | Target Engine Version (目标版本号) | 建议升级到的具体版本 |
+| 10 | Upgrade Type (更新类型) | Major（大版本）/ Minor（小版本） |
+| 11 | Recommend Upgrade Instance Type (建议升级实例类型) | 适配新版本的建议规格 |
+| 12 | Recommend Reason (建议理由) | 升级的必要性说明 |
+
+## 更新 EOS 数据
+
+EOS 生命周期数据维护在 `eos_skill/eos_data.py`，当 AWS 公布新的停止支持日期时请更新此文件。
