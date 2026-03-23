@@ -173,6 +173,9 @@ def scan_rds(session, account: str, region: str, version_cache: LatestVersionCac
     for page in paginator.paginate():
         for cluster in page["DBClusters"]:
             engine = cluster["Engine"]
+            # Skip non-Aurora clusters (docdb, neptune also appear here)
+            if not engine.startswith("aurora-"):
+                continue
             lookup_engine = engine.replace("aurora-", "").replace("postgresql", "postgres")
             version = cluster["EngineVersion"]
             lifecycle = lookup_lifecycle(lookup_engine, version)
@@ -197,13 +200,16 @@ def scan_rds(session, account: str, region: str, version_cache: LatestVersionCac
                 eol_engine=eol_engine_key, eol_cycle=eol_cycle,
                 latest_version=latest))
 
-    # --- DB Instances (standalone RDS only, skip Aurora members) ---
+    # --- DB Instances (standalone RDS only, skip Aurora/DocDB/Neptune members) ---
     paginator = rds.get_paginator("describe_db_instances")
     for page in paginator.paginate():
         for db in page["DBInstances"]:
             if db["DBInstanceIdentifier"] in aurora_instance_ids:
                 continue
             engine = db["Engine"]
+            # Skip non-RDS engines (aurora, docdb, neptune handled by their own scanners)
+            if engine.startswith("aurora-") or engine in ("docdb", "neptune"):
+                continue
             version = db["EngineVersion"]
             lifecycle = lookup_lifecycle(engine, version)
             latest = version_cache.get_latest_rds_version(engine) if version_cache else None
@@ -332,6 +338,9 @@ def scan_documentdb(session, account: str, region: str, version_cache: LatestVer
     paginator = docdb.get_paginator("describe_db_clusters")
     for page in paginator.paginate():
         for cluster in page["DBClusters"]:
+            # Skip non-DocumentDB clusters (neptune, aurora also appear here)
+            if cluster.get("Engine") != "docdb":
+                continue
             version = cluster.get("EngineVersion", "N/A")
             lifecycle = lookup_lifecycle("docdb", version)
 
