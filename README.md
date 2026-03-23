@@ -218,15 +218,17 @@ The upgrade type is determined by engine-specific version comparison rules:
 
 | Engine | Major Version Parts | Major Example | Minor Example |
 |--------|-------------------|---------------|---------------|
-| **MySQL** | First 2 parts (`X.Y`) | 8.0 → 8.4, 5.7 → 8.0 | 8.0.35 → 8.0.40 |
-| **PostgreSQL** | First part (`X`) | 13 → 16, 15 → 16 | 16.4 → 16.13 |
-| **MariaDB** | First 2 parts (`X.Y`) | 10.4 → 10.11, 10.6 → 10.11 | 10.11.6 → 10.11.8 |
-| **Redis** | First part (`X`) | 6 → 7 | 6.0 → 6.2 |
-| **EKS** | First 2 parts (`1.Y`) | 1.29 → 1.30, 1.29 → 1.35 | Patch only (e.g., platform version) |
+| **RDS MySQL** | First 2 parts (`X.Y`) | 8.0 → 8.4, 5.7 → 8.0 | 8.0.35 → 8.0.40 |
+| **RDS PostgreSQL** | First part (`X`) | 13 → 16, 15 → 16 | 16.4 → 16.13 |
+| **RDS MariaDB** | First 2 parts (`X.Y`) | 10.4 → 10.11, 10.6 → 10.11 | 10.11.6 → 10.11.8 |
+| **Aurora MySQL** | First 2 parts (`X.Y`) | 2.x → 3.x (MySQL 5.7 → 8.0) | 3.04 → 3.07 |
+| **Aurora PostgreSQL** | First part (`X`) | 13 → 16, 14 → 16 | 16.4 → 16.13 |
+| **ElastiCache Redis** | First part (`X`) | 6 → 7 | 6.0 → 6.2 |
+| **EKS** | First 2 parts (`1.Y`), every minor version bump is Major | 1.29 → 1.30, 1.29 → 1.35 | Patch only (e.g., platform version) |
 | **DocumentDB** | First part (`X`) | 3.6 → 5.0, 4.0 → 5.0 | — |
 | **Neptune** | First 2 parts (`X.Y`) | 1.2 → 1.3, 1.3 → 1.4 | 1.3.2.1 → 1.3.3.0 |
 | **OpenSearch** | First part (`X`) | 1.3 → 2.11 | 2.3 → 2.11 |
-| **Kafka (MSK)** | First part (`X`) | 2.8 → 3.6 | 3.3 → 3.6 |
-| **Lambda** | Runtime version number | python3.8 → python3.12 | python3.11 → python3.12 |
-| **ActiveMQ** | First 2 parts (`X.Y`) | 5.15 → 5.17 | 5.17.3 → 5.17.6 |
-| **RabbitMQ** | First 2 parts (`X.Y`) | 3.10 → 3.13 | 3.12.5 → 3.12.14 |
+| **MSK Kafka** | First part (`X`) | 2.8 → 3.6 | 3.3 → 3.6 |
+| **Lambda** | Full runtime identifier (any change = Major) | python3.11 → python3.12, nodejs18 → nodejs20 | Internal patches (automatic by AWS) |
+| **Amazon MQ ActiveMQ** | First 2 parts (`X.Y`) | 5.15 → 5.17 | 5.17.3 → 5.17.6 |
+| **Amazon MQ RabbitMQ** | First 2 parts (`X.Y`) | 3.10 → 3.13 | 3.12.5 → 3.12.14 |

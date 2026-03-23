@@ -34,12 +34,17 @@ def _determine_upgrade_type(current: str, target: str, engine: str = "") -> str:
     Rules by engine:
     - mysql, mariadb, kubernetes, neptune, activemq, rabbitmq: compare first TWO parts
     - postgres, redis, docdb, opensearch, kafka: compare FIRST part
-    - lambda: compare runtime version number
+    - lambda: any runtime change is Major (each runtime requires manual migration)
     """
+    engine_lower = engine.lower() if engine else ""
+
+    # Lambda: any runtime identifier change is Major
+    if engine_lower == "lambda":
+        return "Major" if current != target else "Minor"
+
     try:
         cur = _version_tuple(current)
         tgt = _version_tuple(target)
-        engine_lower = engine.lower() if engine else ""
 
         if engine_lower in _TWO_PART_MAJOR:
             # Compare first two parts: MySQL 8.0≠8.4 → Major, EKS 1.29≠1.30 → Major
@@ -47,7 +52,7 @@ def _determine_upgrade_type(current: str, target: str, engine: str = "") -> str:
                 return "Major"
             return "Minor"
         else:
-            # postgres, redis, docdb, opensearch, kafka, lambda, etc.
+            # postgres, redis, docdb, opensearch, kafka, etc.
             # Compare first part: PostgreSQL 15≠16 → Major
             if cur[0] != tgt[0]:
                 return "Major"
