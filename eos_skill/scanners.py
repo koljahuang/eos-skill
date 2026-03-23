@@ -241,11 +241,208 @@ def scan_eks(session, account: str, region: str) -> list[dict]:
     return results
 
 
+def scan_documentdb(session, account: str, region: str) -> list[dict]:
+    """Scan DocumentDB clusters for EOS info."""
+    rds = session.client("rds")
+    results = []
+
+    paginator = rds.get_paginator("describe_db_clusters")
+    for page in paginator.paginate(Filters=[{"Name": "engine", "Values": ["docdb"]}]):
+        for cluster in page["DBClusters"]:
+            version = cluster.get("EngineVersion", "N/A")
+            lifecycle = lookup_lifecycle("docdb", version)
+
+            # Get instance type from cluster members
+            instance_type = "N/A"
+            if cluster.get("DBClusterMembers"):
+                try:
+                    member_id = cluster["DBClusterMembers"][0]["DBInstanceIdentifier"]
+                    inst = rds.describe_db_instances(DBInstanceIdentifier=member_id)
+                    instance_type = inst["DBInstances"][0].get("DBInstanceClass", "N/A")
+                except Exception:
+                    pass
+
+            row = {
+                "account": account,
+                "region": region,
+                "name": cluster["DBClusterIdentifier"],
+                "engine": "DocumentDB",
+                "resource_type": "DocumentDB",
+                "instance_type": instance_type,
+                "engine_version": version,
+                "eos_date": lifecycle.eos_date if lifecycle else None,
+                "target_version": lifecycle.target_version if lifecycle else None,
+                "upgrade_type": lifecycle.upgrade_type if lifecycle else None,
+                "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
+                "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
+            }
+            results.append(row)
+
+    return results
+
+
+def scan_opensearch(session, account: str, region: str) -> list[dict]:
+    """Scan OpenSearch/Elasticsearch domains for EOS info."""
+    client = session.client("opensearch")
+    results = []
+
+    domain_names = client.list_domain_names().get("DomainNames", [])
+    if not domain_names:
+        return results
+
+    names = [d["DomainName"] for d in domain_names]
+    domains = client.describe_domains(DomainNames=names).get("DomainStatusList", [])
+
+    for domain in domains:
+        engine_version = domain.get("EngineVersion", "N/A")
+        # engine_version format: "OpenSearch_2.11" or "Elasticsearch_7.10"
+        lifecycle = lookup_lifecycle("opensearch", engine_version)
+
+        # Get instance type from cluster config
+        cluster_config = domain.get("ClusterConfig", {})
+        instance_type = cluster_config.get("InstanceType", "N/A")
+
+        row = {
+            "account": account,
+            "region": region,
+            "name": domain["DomainName"],
+            "engine": "OpenSearch" if "OpenSearch" in engine_version else "Elasticsearch",
+            "resource_type": "OpenSearch",
+            "instance_type": instance_type,
+            "engine_version": engine_version,
+            "eos_date": lifecycle.eos_date if lifecycle else None,
+            "target_version": lifecycle.target_version if lifecycle else None,
+            "upgrade_type": lifecycle.upgrade_type if lifecycle else None,
+            "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
+            "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
+        }
+        results.append(row)
+
+    return results
+
+
+def scan_msk(session, account: str, region: str) -> list[dict]:
+    """Scan MSK Kafka clusters for EOS info."""
+    client = session.client("kafka")
+    results = []
+
+    paginator = client.get_paginator("list_clusters_v2")
+    for page in paginator.paginate():
+        for cluster in page.get("ClusterInfoList", []):
+            cluster_name = cluster.get("ClusterName", "N/A")
+            cluster_type = cluster.get("ClusterType", "PROVISIONED")
+
+            if cluster_type == "PROVISIONED":
+                prov = cluster.get("Provisioned", {})
+                version = prov.get("CurrentBrokerSoftwareInfo", {}).get("KafkaVersion", "N/A")
+                broker_nodes = prov.get("BrokerNodeGroupInfo", {})
+                instance_type = broker_nodes.get("InstanceType", "N/A")
+            else:
+                # Serverless
+                version = "Serverless"
+                instance_type = "Serverless"
+
+            lifecycle = lookup_lifecycle("kafka", version)
+
+            row = {
+                "account": account,
+                "region": region,
+                "name": cluster_name,
+                "engine": "Kafka",
+                "resource_type": "MSK",
+                "instance_type": instance_type,
+                "engine_version": version,
+                "eos_date": lifecycle.eos_date if lifecycle else None,
+                "target_version": lifecycle.target_version if lifecycle else None,
+                "upgrade_type": lifecycle.upgrade_type if lifecycle else None,
+                "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
+                "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
+            }
+            results.append(row)
+
+    return results
+
+
+def scan_lambda(session, account: str, region: str) -> list[dict]:
+    """Scan Lambda functions for deprecated runtimes."""
+    client = session.client("lambda")
+    results = []
+
+    paginator = client.get_paginator("list_functions")
+    for page in paginator.paginate():
+        for func in page["Functions"]:
+            runtime = func.get("Runtime")
+            if not runtime:
+                continue  # Skip container image or custom runtimes
+
+            lifecycle = lookup_lifecycle("lambda", runtime)
+            if not lifecycle:
+                continue  # Skip unknown/current runtimes with no EOS concern
+
+            row = {
+                "account": account,
+                "region": region,
+                "name": func["FunctionName"],
+                "engine": "Lambda",
+                "resource_type": "Lambda",
+                "instance_type": f'{func.get("MemorySize", "N/A")}MB / {func.get("Architectures", ["N/A"])[0]}',
+                "engine_version": runtime,
+                "eos_date": lifecycle.eos_date,
+                "target_version": lifecycle.target_version,
+                "upgrade_type": lifecycle.upgrade_type,
+                "recommend_instance_type": None,
+                "recommend_reason": lifecycle.recommend_reason,
+            }
+            results.append(row)
+
+    return results
+
+
+def scan_amazonmq(session, account: str, region: str) -> list[dict]:
+    """Scan Amazon MQ brokers (ActiveMQ, RabbitMQ) for EOS info."""
+    client = session.client("mq")
+    results = []
+
+    paginator = client.get_paginator("list_brokers")
+    for page in paginator.paginate():
+        for broker_summary in page.get("BrokerSummaries", []):
+            broker_id = broker_summary["BrokerId"]
+            broker = client.describe_broker(BrokerId=broker_id)
+
+            engine = broker.get("EngineType", "").upper()
+            version = broker.get("EngineVersion", "N/A")
+            lookup_engine = "activemq" if engine == "ACTIVEMQ" else "rabbitmq"
+            lifecycle = lookup_lifecycle(lookup_engine, version)
+
+            row = {
+                "account": account,
+                "region": region,
+                "name": broker.get("BrokerName", broker_id),
+                "engine": ENGINE_DISPLAY_NAMES.get(lookup_engine, engine),
+                "resource_type": "Amazon MQ",
+                "instance_type": broker.get("HostInstanceType", "N/A"),
+                "engine_version": version,
+                "eos_date": lifecycle.eos_date if lifecycle else None,
+                "target_version": lifecycle.target_version if lifecycle else None,
+                "upgrade_type": lifecycle.upgrade_type if lifecycle else None,
+                "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
+                "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
+            }
+            results.append(row)
+
+    return results
+
+
 # Registry of scanner functions keyed by resource type
 SCANNERS = {
     "rds": scan_rds,
     "elasticache": scan_elasticache,
     "eks": scan_eks,
+    "documentdb": scan_documentdb,
+    "opensearch": scan_opensearch,
+    "msk": scan_msk,
+    "lambda": scan_lambda,
+    "amazonmq": scan_amazonmq,
 }
 
 

@@ -2,13 +2,18 @@
 
 # EOS Skill - AWS 停止支持资源扫描器
 
-扫描 AWS 资源（RDS、ElastiCache、EKS）的停止支持（EOS）状态，生成 Excel 升级报告。
+扫描 AWS 资源的停止支持（EOS）状态，生成 Excel 升级报告。
 
 ## 功能
 
 - 扫描 RDS 实例和 Aurora 集群（MySQL、PostgreSQL、MariaDB）
 - 扫描 ElastiCache 集群（Redis、Memcached）
 - 扫描 EKS Kubernetes 集群
+- 扫描 DocumentDB 集群（MongoDB 兼容）
+- 扫描 OpenSearch / Elasticsearch 域
+- 扫描 MSK Kafka 集群
+- 扫描 Lambda 函数（运行时弃用检测）
+- 扫描 Amazon MQ 代理（ActiveMQ、RabbitMQ）
 - 颜色编码 Excel 报告（红色=已过期，黄色=即将过期，绿色=安全）
 - 双语表头（英文 + 中文）
 - 通过 IAM 角色跨账号扫描
@@ -130,7 +135,7 @@ python -m eos_skill.main \
 | `--profile` | 否 | AWS CLI 配置名 |
 | `--access-key` | 否 | AWS Access Key ID（需配合 `--secret-key`） |
 | `--secret-key` | 否 | AWS Secret Access Key（需配合 `--access-key`） |
-| `--resource-types` | 否 | `rds`、`elasticache`、`eks`（默认扫描全部） |
+| `--resource-types` | 否 | `rds`、`elasticache`、`eks`、`documentdb`、`opensearch`、`msk`、`lambda`、`amazonmq`（默认扫描全部） |
 | `--role-name` | 否 | 跨账号 IAM 角色名（默认: `OrganizationAccountAccessRole`） |
 | `--output` | 否 | 输出文件路径（默认: `eos_report_<timestamp>.xlsx`） |
 
@@ -142,7 +147,7 @@ python -m eos_skill.main \
 | 2 | Region (区域) | 资源物理区域 |
 | 3 | Cluster/Instance Name (集群/实例名称) | 数据库或集群的唯一标识 |
 | 4 | Engine (引擎) | MySQL、PostgreSQL、Redis 等 |
-| 5 | Resource Type (资源类型) | RDS、Aurora、ElastiCache、EKS |
+| 5 | Resource Type (资源类型) | RDS、Aurora、ElastiCache、EKS、DocumentDB、OpenSearch、MSK、Lambda、Amazon MQ |
 | 6 | Instance Type (实例类型) | 当前规格（如 db.t3.medium） |
 | 7 | Engine Version (引擎版本) | 当前运行的版本号 |
 | 8 | End of Support Date (停止支持日期) | 官方停止维护的最后期限 |

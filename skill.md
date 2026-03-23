@@ -1,6 +1,6 @@
 ---
 name: eos-scan
-description: Scan AWS resources (RDS, ElastiCache, EKS) for End-of-Support (EOS) status and generate an Excel upgrade report.
+description: Scan AWS resources (RDS, ElastiCache, EKS, DocumentDB, OpenSearch, MSK, Lambda, Amazon MQ) for End-of-Support (EOS) status and generate an Excel upgrade report.
 trigger: When the user wants to check AWS resources for end-of-support versions, generate EOS reports, or plan AWS version upgrades.
 ---
 
@@ -24,6 +24,11 @@ Ask the user for the following information if not already provided:
    - `rds` - RDS instances and Aurora clusters (MySQL, PostgreSQL, MariaDB)
    - `elasticache` - ElastiCache clusters (Redis, Memcached)
    - `eks` - EKS Kubernetes clusters
+   - `documentdb` - DocumentDB clusters (MongoDB-compatible)
+   - `opensearch` - OpenSearch/Elasticsearch domains
+   - `msk` - MSK Kafka clusters
+   - `lambda` - Lambda functions (runtime deprecation)
+   - `amazonmq` - Amazon MQ brokers (ActiveMQ, RabbitMQ)
    - Default: scan all types
 5. **Cross-account Role Name** (optional): IAM role name for assuming into target accounts
    - Default: `OrganizationAccountAccessRole`
@@ -72,7 +77,7 @@ python -m eos_skill.main \
 
 The scan will:
 - Connect to each account/region combination
-- Query RDS, ElastiCache, and/or EKS APIs
+- Query RDS, ElastiCache, EKS, DocumentDB, OpenSearch, MSK, Lambda, Amazon MQ APIs
 - Match each resource's engine version against known EOS lifecycle data
 - Collect results into a structured dataset
 
@@ -86,7 +91,7 @@ The Excel report contains these 12 columns:
 | 2 | Region | 区域 | Resource's AWS region |
 | 3 | Cluster/Instance Name | 集群/实例名称 | Unique identifier |
 | 4 | Engine | 引擎 | MySQL, PostgreSQL, Redis, etc. |
-| 5 | Resource Type | 资源类型 | RDS, ElastiCache, EKS, Aurora |
+| 5 | Resource Type | 资源类型 | RDS, Aurora, ElastiCache, EKS, DocumentDB, OpenSearch, MSK, Lambda, Amazon MQ |
 | 6 | Instance Type | 实例类型 | Current spec (e.g., db.t3.medium) |
 | 7 | Engine Version | 引擎版本 | Current running version |
 | 8 | End of Support Date | 停止支持日期 | Official EOS deadline |
@@ -117,6 +122,12 @@ The EOS lifecycle data is maintained in `eos_skill/eos_data.py`. It includes kno
 - **ElastiCache Redis**: 6.0, 6.2, 7.0, 7.1
 - **ElastiCache Memcached**: 1.6
 - **EKS Kubernetes**: 1.24 - 1.31
+- **DocumentDB**: 3.6, 4.0, 5.0
+- **OpenSearch**: Elasticsearch 5.6/6.8/7.10, OpenSearch 1.0/1.3/2.3/2.11/2.13
+- **MSK Kafka**: 2.6, 2.7, 2.8, 3.3, 3.5, 3.6
+- **Lambda**: Python 3.7-3.12, Node.js 14-20, Java 8-21, .NET 6/8, Ruby 3.2/3.3
+- **Amazon MQ ActiveMQ**: 5.15, 5.16, 5.17
+- **Amazon MQ RabbitMQ**: 3.10, 3.11, 3.12, 3.13
 
 > **Note**: EOS dates are approximate. Always verify against the latest AWS documentation.
 > Update `eos_data.py` when AWS announces new EOS dates.

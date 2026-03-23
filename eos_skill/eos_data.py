@@ -294,6 +294,427 @@ EKS_KUBERNETES = {
 }
 
 
+# ---------------------------------------------------------------------------
+# DocumentDB (MongoDB-compatible)
+# ---------------------------------------------------------------------------
+DOCUMENTDB = {
+    "3.6": VersionLifecycle(
+        engine="DocumentDB",
+        version="3.6",
+        eos_date=date(2024, 3, 31),
+        target_version="5.0",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="DocumentDB 3.6 has reached EOL. Upgrade to 5.0 for transactions, flexible indexing, and continued support.",
+    ),
+    "4.0": VersionLifecycle(
+        engine="DocumentDB",
+        version="4.0",
+        eos_date=date(2025, 4, 30),
+        target_version="5.0",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="DocumentDB 4.0 approaching EOL. Upgrade to 5.0.",
+    ),
+    "5.0": VersionLifecycle(
+        engine="DocumentDB",
+        version="5.0",
+        eos_date=None,
+        target_version=None,
+        upgrade_type=None,
+        recommend_instance_type=None,
+        recommend_reason="Current supported version.",
+    ),
+}
+
+# ---------------------------------------------------------------------------
+# OpenSearch Service
+# ---------------------------------------------------------------------------
+OPENSEARCH = {
+    "Elasticsearch_5.6": VersionLifecycle(
+        engine="Elasticsearch",
+        version="5.6",
+        eos_date=date(2023, 1, 31),
+        target_version="OpenSearch_2.13",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Elasticsearch 5.6 has reached EOL. Migrate to OpenSearch 2.x.",
+    ),
+    "Elasticsearch_6.8": VersionLifecycle(
+        engine="Elasticsearch",
+        version="6.8",
+        eos_date=date(2023, 8, 31),
+        target_version="OpenSearch_2.13",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Elasticsearch 6.x has reached EOL. Migrate to OpenSearch 2.x.",
+    ),
+    "Elasticsearch_7.10": VersionLifecycle(
+        engine="Elasticsearch",
+        version="7.10",
+        eos_date=date(2024, 4, 30),
+        target_version="OpenSearch_2.13",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Elasticsearch 7.10 has reached EOL. Migrate to OpenSearch 2.x.",
+    ),
+    "OpenSearch_1.0": VersionLifecycle(
+        engine="OpenSearch",
+        version="1.0",
+        eos_date=date(2024, 6, 30),
+        target_version="OpenSearch_2.13",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="OpenSearch 1.x approaching EOL. Upgrade to 2.x.",
+    ),
+    "OpenSearch_1.3": VersionLifecycle(
+        engine="OpenSearch",
+        version="1.3",
+        eos_date=date(2025, 3, 31),
+        target_version="OpenSearch_2.13",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="OpenSearch 1.3 approaching EOL. Upgrade to 2.x.",
+    ),
+    "OpenSearch_2.3": VersionLifecycle(
+        engine="OpenSearch",
+        version="2.3",
+        eos_date=date(2026, 3, 31),
+        target_version="OpenSearch_2.13",
+        upgrade_type="Minor",
+        recommend_instance_type=None,
+        recommend_reason="Upgrade to latest 2.x for bug fixes and features.",
+    ),
+    "OpenSearch_2.11": VersionLifecycle(
+        engine="OpenSearch",
+        version="2.11",
+        eos_date=date(2026, 12, 31),
+        target_version="OpenSearch_2.13",
+        upgrade_type="Minor",
+        recommend_instance_type=None,
+        recommend_reason="Upgrade to latest 2.x minor version.",
+    ),
+    "OpenSearch_2.13": VersionLifecycle(
+        engine="OpenSearch",
+        version="2.13",
+        eos_date=None,
+        target_version=None,
+        upgrade_type=None,
+        recommend_instance_type=None,
+        recommend_reason="Current supported version.",
+    ),
+}
+
+# ---------------------------------------------------------------------------
+# MSK (Managed Streaming for Apache Kafka)
+# ---------------------------------------------------------------------------
+MSK_KAFKA = {
+    "2.6": VersionLifecycle(
+        engine="Kafka",
+        version="2.6",
+        eos_date=date(2024, 3, 31),
+        target_version="3.6.0",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Kafka 2.6 has reached EOL on MSK. Upgrade to 3.6.",
+    ),
+    "2.7": VersionLifecycle(
+        engine="Kafka",
+        version="2.7",
+        eos_date=date(2024, 6, 30),
+        target_version="3.6.0",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Kafka 2.7 has reached EOL on MSK. Upgrade to 3.6.",
+    ),
+    "2.8": VersionLifecycle(
+        engine="Kafka",
+        version="2.8",
+        eos_date=date(2024, 11, 30),
+        target_version="3.6.0",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Kafka 2.8 has reached EOL on MSK. Upgrade to 3.6.",
+    ),
+    "3.3": VersionLifecycle(
+        engine="Kafka",
+        version="3.3",
+        eos_date=date(2025, 9, 30),
+        target_version="3.6.0",
+        upgrade_type="Minor",
+        recommend_instance_type=None,
+        recommend_reason="Kafka 3.3 approaching EOL. Upgrade to 3.6.",
+    ),
+    "3.5": VersionLifecycle(
+        engine="Kafka",
+        version="3.5",
+        eos_date=date(2026, 6, 30),
+        target_version="3.6.0",
+        upgrade_type="Minor",
+        recommend_instance_type=None,
+        recommend_reason="Upgrade to 3.6 for latest features and fixes.",
+    ),
+    "3.6": VersionLifecycle(
+        engine="Kafka",
+        version="3.6",
+        eos_date=None,
+        target_version=None,
+        upgrade_type=None,
+        recommend_instance_type=None,
+        recommend_reason="Current supported version.",
+    ),
+}
+
+# ---------------------------------------------------------------------------
+# Lambda Runtimes
+# ---------------------------------------------------------------------------
+LAMBDA_RUNTIMES = {
+    "python3.7": VersionLifecycle(
+        engine="Lambda",
+        version="python3.7",
+        eos_date=date(2023, 12, 4),
+        target_version="python3.12",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Python 3.7 runtime deprecated. Migrate to Python 3.12.",
+    ),
+    "python3.8": VersionLifecycle(
+        engine="Lambda",
+        version="python3.8",
+        eos_date=date(2024, 10, 14),
+        target_version="python3.12",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Python 3.8 runtime deprecated. Migrate to Python 3.12.",
+    ),
+    "python3.9": VersionLifecycle(
+        engine="Lambda",
+        version="python3.9",
+        eos_date=date(2025, 9, 30),
+        target_version="python3.12",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Python 3.9 approaching deprecation. Migrate to Python 3.12.",
+    ),
+    "python3.10": VersionLifecycle(
+        engine="Lambda",
+        version="python3.10",
+        eos_date=date(2026, 10, 4),
+        target_version="python3.12",
+        upgrade_type="Minor",
+        recommend_instance_type=None,
+        recommend_reason="Plan migration to Python 3.12.",
+    ),
+    "python3.11": VersionLifecycle(
+        engine="Lambda",
+        version="python3.11",
+        eos_date=date(2027, 10, 24),
+        target_version="python3.12",
+        upgrade_type="Minor",
+        recommend_instance_type=None,
+        recommend_reason="Current supported. Consider Python 3.12 for latest features.",
+    ),
+    "python3.12": VersionLifecycle(
+        engine="Lambda",
+        version="python3.12",
+        eos_date=date(2028, 10, 28),
+        target_version=None,
+        upgrade_type=None,
+        recommend_instance_type=None,
+        recommend_reason="Current latest runtime.",
+    ),
+    "nodejs14.x": VersionLifecycle(
+        engine="Lambda",
+        version="nodejs14.x",
+        eos_date=date(2023, 12, 4),
+        target_version="nodejs20.x",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Node.js 14 runtime deprecated. Migrate to Node.js 20.",
+    ),
+    "nodejs16.x": VersionLifecycle(
+        engine="Lambda",
+        version="nodejs16.x",
+        eos_date=date(2024, 6, 12),
+        target_version="nodejs20.x",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Node.js 16 runtime deprecated. Migrate to Node.js 20.",
+    ),
+    "nodejs18.x": VersionLifecycle(
+        engine="Lambda",
+        version="nodejs18.x",
+        eos_date=date(2025, 9, 30),
+        target_version="nodejs20.x",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Node.js 18 approaching deprecation. Migrate to Node.js 20.",
+    ),
+    "nodejs20.x": VersionLifecycle(
+        engine="Lambda",
+        version="nodejs20.x",
+        eos_date=date(2026, 10, 30),
+        target_version=None,
+        upgrade_type=None,
+        recommend_instance_type=None,
+        recommend_reason="Current latest runtime.",
+    ),
+    "java8": VersionLifecycle(
+        engine="Lambda",
+        version="java8",
+        eos_date=date(2024, 1, 8),
+        target_version="java21",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Java 8 (non-AL2) runtime deprecated. Migrate to Java 21.",
+    ),
+    "java8.al2": VersionLifecycle(
+        engine="Lambda",
+        version="java8.al2",
+        eos_date=date(2025, 2, 28),
+        target_version="java21",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Java 8 AL2 runtime approaching deprecation. Migrate to Java 21.",
+    ),
+    "java11": VersionLifecycle(
+        engine="Lambda",
+        version="java11",
+        eos_date=date(2025, 9, 30),
+        target_version="java21",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="Java 11 approaching deprecation. Migrate to Java 21.",
+    ),
+    "java17": VersionLifecycle(
+        engine="Lambda",
+        version="java17",
+        eos_date=date(2026, 10, 31),
+        target_version="java21",
+        upgrade_type="Minor",
+        recommend_instance_type=None,
+        recommend_reason="Plan migration to Java 21.",
+    ),
+    "java21": VersionLifecycle(
+        engine="Lambda",
+        version="java21",
+        eos_date=date(2028, 9, 30),
+        target_version=None,
+        upgrade_type=None,
+        recommend_instance_type=None,
+        recommend_reason="Current latest runtime.",
+    ),
+    "dotnet6": VersionLifecycle(
+        engine="Lambda",
+        version="dotnet6",
+        eos_date=date(2024, 4, 12),
+        target_version="dotnet8",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason=".NET 6 runtime deprecated. Migrate to .NET 8.",
+    ),
+    "dotnet8": VersionLifecycle(
+        engine="Lambda",
+        version="dotnet8",
+        eos_date=date(2026, 11, 10),
+        target_version=None,
+        upgrade_type=None,
+        recommend_instance_type=None,
+        recommend_reason="Current latest runtime.",
+    ),
+    "ruby3.2": VersionLifecycle(
+        engine="Lambda",
+        version="ruby3.2",
+        eos_date=date(2026, 3, 31),
+        target_version="ruby3.3",
+        upgrade_type="Minor",
+        recommend_instance_type=None,
+        recommend_reason="Plan migration to Ruby 3.3.",
+    ),
+    "ruby3.3": VersionLifecycle(
+        engine="Lambda",
+        version="ruby3.3",
+        eos_date=date(2027, 3, 31),
+        target_version=None,
+        upgrade_type=None,
+        recommend_instance_type=None,
+        recommend_reason="Current latest runtime.",
+    ),
+}
+
+# ---------------------------------------------------------------------------
+# Amazon MQ
+# ---------------------------------------------------------------------------
+AMAZONMQ_ACTIVEMQ = {
+    "5.15": VersionLifecycle(
+        engine="ActiveMQ",
+        version="5.15",
+        eos_date=date(2024, 3, 31),
+        target_version="5.17.6",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="ActiveMQ 5.15 has reached EOL on Amazon MQ. Upgrade to 5.17.",
+    ),
+    "5.16": VersionLifecycle(
+        engine="ActiveMQ",
+        version="5.16",
+        eos_date=date(2025, 6, 30),
+        target_version="5.17.6",
+        upgrade_type="Minor",
+        recommend_instance_type=None,
+        recommend_reason="ActiveMQ 5.16 approaching EOL. Upgrade to 5.17.",
+    ),
+    "5.17": VersionLifecycle(
+        engine="ActiveMQ",
+        version="5.17",
+        eos_date=None,
+        target_version="5.17.6",
+        upgrade_type="Minor",
+        recommend_instance_type=None,
+        recommend_reason="Current supported version. Keep on latest minor.",
+    ),
+}
+
+AMAZONMQ_RABBITMQ = {
+    "3.10": VersionLifecycle(
+        engine="RabbitMQ",
+        version="3.10",
+        eos_date=date(2024, 7, 31),
+        target_version="3.13",
+        upgrade_type="Major",
+        recommend_instance_type=None,
+        recommend_reason="RabbitMQ 3.10 has reached EOL. Upgrade to 3.13.",
+    ),
+    "3.11": VersionLifecycle(
+        engine="RabbitMQ",
+        version="3.11",
+        eos_date=date(2025, 3, 31),
+        target_version="3.13",
+        upgrade_type="Minor",
+        recommend_instance_type=None,
+        recommend_reason="RabbitMQ 3.11 approaching EOL. Upgrade to 3.13.",
+    ),
+    "3.12": VersionLifecycle(
+        engine="RabbitMQ",
+        version="3.12",
+        eos_date=date(2025, 12, 31),
+        target_version="3.13",
+        upgrade_type="Minor",
+        recommend_instance_type=None,
+        recommend_reason="Upgrade to 3.13 for quorum queues improvements.",
+    ),
+    "3.13": VersionLifecycle(
+        engine="RabbitMQ",
+        version="3.13",
+        eos_date=None,
+        target_version=None,
+        upgrade_type=None,
+        recommend_instance_type=None,
+        recommend_reason="Current supported version.",
+    ),
+}
+
+
 def _extract_major(version_str: str, engine: str) -> str:
     """Extract the major version key from a full version string."""
     parts = version_str.split(".")
@@ -308,6 +729,19 @@ def _extract_major(version_str: str, engine: str) -> str:
         return ".".join(parts[:2]) if len(parts) >= 2 else parts[0]
     elif engine == "kubernetes":
         return ".".join(parts[:2]) if len(parts) >= 2 else parts[0]
+    elif engine == "docdb":
+        # DocumentDB: 4.0.0 -> "4.0"
+        return ".".join(parts[:2]) if len(parts) >= 2 else parts[0]
+    elif engine == "opensearch":
+        # OpenSearch_2.11 or Elasticsearch_7.10 -> keep as-is from caller
+        return version_str
+    elif engine == "kafka":
+        return ".".join(parts[:2]) if len(parts) >= 2 else parts[0]
+    elif engine == "lambda":
+        # Lambda runtimes: python3.12, nodejs20.x, java21 -> keep as-is
+        return version_str
+    elif engine in ("activemq", "rabbitmq"):
+        return ".".join(parts[:2]) if len(parts) >= 2 else parts[0]
     return parts[0]
 
 
@@ -319,6 +753,12 @@ _ENGINE_MAP = {
     "redis": ELASTICACHE_REDIS,
     "memcached": ELASTICACHE_MEMCACHED,
     "kubernetes": EKS_KUBERNETES,
+    "docdb": DOCUMENTDB,
+    "opensearch": OPENSEARCH,
+    "kafka": MSK_KAFKA,
+    "lambda": LAMBDA_RUNTIMES,
+    "activemq": AMAZONMQ_ACTIVEMQ,
+    "rabbitmq": AMAZONMQ_RABBITMQ,
 }
 
 # Friendly engine names
@@ -329,6 +769,12 @@ ENGINE_DISPLAY_NAMES = {
     "redis": "Redis",
     "memcached": "Memcached",
     "kubernetes": "Kubernetes",
+    "docdb": "DocumentDB",
+    "opensearch": "OpenSearch",
+    "kafka": "Kafka",
+    "lambda": "Lambda",
+    "activemq": "ActiveMQ",
+    "rabbitmq": "RabbitMQ",
 }
 
 
