@@ -21,14 +21,42 @@ def _is_upgrade(current_version: str, target_version: str) -> bool:
         return True
 
 
-def _determine_upgrade_type(current: str, target: str) -> str:
-    """Determine if upgrade is Major or Minor based on version comparison."""
+# Engines where major version is defined by first TWO version parts
+# e.g., MySQL 8.0→8.4 is Major, 8.0.35→8.0.40 is Minor
+_TWO_PART_MAJOR = {"mysql", "mariadb", "neptune", "activemq", "rabbitmq"}
+
+
+def _determine_upgrade_type(current: str, target: str, engine: str = "") -> str:
+    """
+    Determine if upgrade is Major or Minor based on engine-specific version comparison.
+
+    Rules by engine:
+    - mysql, mariadb, neptune, activemq, rabbitmq: compare first TWO parts
+    - kubernetes: >1 minor version gap = Major, 1 = Minor
+    - postgres, redis, docdb, opensearch, kafka: compare FIRST part
+    - lambda: compare runtime version number
+    """
     try:
         cur = _version_tuple(current)
         tgt = _version_tuple(target)
-        if cur[0] != tgt[0]:
-            return "Major"
-        return "Minor"
+        engine_lower = engine.lower() if engine else ""
+
+        if engine_lower in _TWO_PART_MAJOR:
+            # Compare first two parts: MySQL 8.0≠8.4 → Major
+            if cur[:2] != tgt[:2]:
+                return "Major"
+            return "Minor"
+        elif engine_lower == "kubernetes":
+            # EKS: >1 minor version gap = Major, exactly 1 = Minor
+            if len(cur) >= 2 and len(tgt) >= 2 and abs(tgt[1] - cur[1]) > 1:
+                return "Major"
+            return "Minor"
+        else:
+            # postgres, redis, docdb, opensearch, kafka, lambda, etc.
+            # Compare first part: PostgreSQL 15≠16 → Major
+            if cur[0] != tgt[0]:
+                return "Major"
+            return "Minor"
     except (ValueError, TypeError, IndexError):
         return "Major"
 
@@ -63,12 +91,18 @@ def _build_row(account, region, cluster_name, instance_name, engine, resource_ty
     """Build a result row dict with dynamic latest version check and EOL data."""
     target = latest_version or (lifecycle.target_version if lifecycle else None)
 
+    engine_key = eol_engine or ""
+
     # Check if already on latest version
     if target and not _is_upgrade(engine_version, target):
         target = None
         upgrade_type = None
     elif target:
-        upgrade_type = _determine_upgrade_type(engine_version, target)
+        # Prefer static upgrade_type when target matches static data
+        if lifecycle and lifecycle.upgrade_type and target == lifecycle.target_version:
+            upgrade_type = lifecycle.upgrade_type
+        else:
+            upgrade_type = _determine_upgrade_type(engine_version, target, engine_key)
     else:
         upgrade_type = None
 
@@ -87,7 +121,7 @@ def _build_row(account, region, cluster_name, instance_name, engine, resource_ty
                     target = None
                     upgrade_type = None
                 else:
-                    upgrade_type = _determine_upgrade_type(engine_version, target)
+                    upgrade_type = _determine_upgrade_type(engine_version, target, engine_key)
 
     return {
         "account": account,

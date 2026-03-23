@@ -187,4 +187,46 @@ python -m eos_skill.main \
 
 ## EOS 数据来源
 
-EOS 停止支持日期和延长支持日期从 [endoflife.date](https://endoflife.date) API 动态获取。目标升级版本维护在 `eos_skill/eos_data.py`，当有新引擎版本发布时请更新此文件。
+| 数据 | 来源 | 获取方式 |
+|------|------|---------|
+| 停止支持日期 (EOS) | [endoflife.date](https://endoflife.date) API | 实时动态获取，`https://endoflife.date/api/{product}.json` |
+| 延长支持日期 (ES) | [endoflife.date](https://endoflife.date) API | 同一 API 的 `extendedSupport` 字段 |
+| 目标引擎版本 | AWS API + `eos_skill/eos_data.py` | AWS `describe_*_versions` API 动态获取最新版本，静态数据兜底 |
+| 更新类型 (Major/Minor) | 计算得出 | 按引擎的版本比较规则判断（见下表） |
+
+支持的 endoflife.date 产品映射：
+
+| 服务 | endoflife.date 产品 |
+|------|-------------------|
+| RDS MySQL | [amazon-rds-mysql](https://endoflife.date/amazon-rds-mysql) |
+| RDS PostgreSQL | [amazon-rds-postgresql](https://endoflife.date/amazon-rds-postgresql) |
+| RDS MariaDB | [amazon-rds-mariadb](https://endoflife.date/amazon-rds-mariadb) |
+| Aurora PostgreSQL | [amazon-aurora-postgresql](https://endoflife.date/amazon-aurora-postgresql) |
+| ElastiCache Redis | [amazon-elasticache-redis](https://endoflife.date/amazon-elasticache-redis) |
+| EKS | [amazon-eks](https://endoflife.date/amazon-eks) |
+| DocumentDB | [amazon-documentdb](https://endoflife.date/amazon-documentdb) |
+| Neptune | [amazon-neptune](https://endoflife.date/amazon-neptune) |
+| OpenSearch | [amazon-opensearch](https://endoflife.date/amazon-opensearch) |
+| MSK | [amazon-msk](https://endoflife.date/amazon-msk) |
+| Lambda | [aws-lambda](https://endoflife.date/aws-lambda) |
+| ActiveMQ | [apache-activemq](https://endoflife.date/apache-activemq) |
+| RabbitMQ | [rabbitmq](https://endoflife.date/rabbitmq) |
+
+## 更新类型判断逻辑 (Major / Minor)
+
+更新类型根据各引擎的版本比较规则判断：
+
+| 引擎 | 大版本判断依据 | Major 示例 | Minor 示例 |
+|------|-------------|-----------|-----------|
+| **MySQL** | 前两位版本号 (`X.Y`) | 8.0 → 8.4, 5.7 → 8.0 | 8.0.35 → 8.0.40 |
+| **PostgreSQL** | 第一位版本号 (`X`) | 13 → 16, 15 → 16 | 16.4 → 16.13 |
+| **MariaDB** | 前两位版本号 (`X.Y`) | 10.4 → 10.11, 10.6 → 10.11 | 10.11.6 → 10.11.8 |
+| **Redis** | 第一位版本号 (`X`) | 6 → 7 | 6.0 → 6.2 |
+| **EKS** | 次版本号差 > 1 | 1.29 → 1.35 | 1.34 → 1.35 |
+| **DocumentDB** | 第一位版本号 (`X`) | 3.6 → 5.0, 4.0 → 5.0 | — |
+| **Neptune** | 前两位版本号 (`X.Y`) | 1.2 → 1.3, 1.3 → 1.4 | 1.3.2.1 → 1.3.3.0 |
+| **OpenSearch** | 第一位版本号 (`X`) | 1.3 → 2.11 | 2.3 → 2.11 |
+| **Kafka (MSK)** | 第一位版本号 (`X`) | 2.8 → 3.6 | 3.3 → 3.6 |
+| **Lambda** | 运行时版本号 | python3.8 → python3.12 | python3.11 → python3.12 |
+| **ActiveMQ** | 前两位版本号 (`X.Y`) | 5.15 → 5.17 | 5.17.3 → 5.17.6 |
+| **RabbitMQ** | 前两位版本号 (`X.Y`) | 3.10 → 3.13 | 3.12.5 → 3.12.14 |

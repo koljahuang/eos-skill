@@ -187,4 +187,46 @@ python -m eos_skill.main \
 
 ## EOS Data Sources
 
-EOS dates and Extended Support dates are fetched dynamically from the [endoflife.date](https://endoflife.date) API. Target upgrade versions are maintained in `eos_skill/eos_data.py`. Update this file when new engine versions are released.
+| Data | Source | Method |
+|------|--------|--------|
+| End of Support (EOS) Date | [endoflife.date](https://endoflife.date) API | Dynamic, real-time fetch via `https://endoflife.date/api/{product}.json` |
+| Extended Support (ES) Date | [endoflife.date](https://endoflife.date) API | Dynamic, `extendedSupport` field from the same API |
+| Target Engine Version | AWS APIs + `eos_skill/eos_data.py` | Dynamic latest from AWS `describe_*_versions` APIs, with static fallback |
+| Upgrade Type (Major/Minor) | Computed | Engine-specific version comparison logic (see below) |
+
+Supported endoflife.date product mappings:
+
+| Service | endoflife.date Product |
+|---------|----------------------|
+| RDS MySQL | [amazon-rds-mysql](https://endoflife.date/amazon-rds-mysql) |
+| RDS PostgreSQL | [amazon-rds-postgresql](https://endoflife.date/amazon-rds-postgresql) |
+| RDS MariaDB | [amazon-rds-mariadb](https://endoflife.date/amazon-rds-mariadb) |
+| Aurora PostgreSQL | [amazon-aurora-postgresql](https://endoflife.date/amazon-aurora-postgresql) |
+| ElastiCache Redis | [amazon-elasticache-redis](https://endoflife.date/amazon-elasticache-redis) |
+| EKS | [amazon-eks](https://endoflife.date/amazon-eks) |
+| DocumentDB | [amazon-documentdb](https://endoflife.date/amazon-documentdb) |
+| Neptune | [amazon-neptune](https://endoflife.date/amazon-neptune) |
+| OpenSearch | [amazon-opensearch](https://endoflife.date/amazon-opensearch) |
+| MSK | [amazon-msk](https://endoflife.date/amazon-msk) |
+| Lambda | [aws-lambda](https://endoflife.date/aws-lambda) |
+| ActiveMQ | [apache-activemq](https://endoflife.date/apache-activemq) |
+| RabbitMQ | [rabbitmq](https://endoflife.date/rabbitmq) |
+
+## Upgrade Type Logic (Major / Minor)
+
+The upgrade type is determined by engine-specific version comparison rules:
+
+| Engine | Major Version Parts | Major Example | Minor Example |
+|--------|-------------------|---------------|---------------|
+| **MySQL** | First 2 parts (`X.Y`) | 8.0 → 8.4, 5.7 → 8.0 | 8.0.35 → 8.0.40 |
+| **PostgreSQL** | First part (`X`) | 13 → 16, 15 → 16 | 16.4 → 16.13 |
+| **MariaDB** | First 2 parts (`X.Y`) | 10.4 → 10.11, 10.6 → 10.11 | 10.11.6 → 10.11.8 |
+| **Redis** | First part (`X`) | 6 → 7 | 6.0 → 6.2 |
+| **EKS** | Minor version gap > 1 | 1.29 → 1.35 | 1.34 → 1.35 |
+| **DocumentDB** | First part (`X`) | 3.6 → 5.0, 4.0 → 5.0 | — |
+| **Neptune** | First 2 parts (`X.Y`) | 1.2 → 1.3, 1.3 → 1.4 | 1.3.2.1 → 1.3.3.0 |
+| **OpenSearch** | First part (`X`) | 1.3 → 2.11 | 2.3 → 2.11 |
+| **Kafka (MSK)** | First part (`X`) | 2.8 → 3.6 | 3.3 → 3.6 |
+| **Lambda** | Runtime version number | python3.8 → python3.12 | python3.11 → python3.12 |
+| **ActiveMQ** | First 2 parts (`X.Y`) | 5.15 → 5.17 | 5.17.3 → 5.17.6 |
+| **RabbitMQ** | First 2 parts (`X.Y`) | 3.10 → 3.13 | 3.12.5 → 3.12.14 |
