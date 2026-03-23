@@ -18,17 +18,37 @@ Scan AWS resources for End-of-Support (EOS) status and generate an Excel upgrade
 - Bilingual headers (English + Chinese)
 - Cross-account scanning via IAM role assumption
 
-## Prerequisites
+## Installation
+
+### Install as Claude Code Skill
 
 ```bash
+# Install the skill to the kiro directory
+npx claude-code skill add --path kiro https://github.com/koljahuang/eos-skill.git
+```
+
+### Install manually
+
+```bash
+# Clone to kiro directory
+git clone https://github.com/koljahuang/eos-skill.git kiro
+
+# Install dependencies
+cd kiro
 pip install boto3 openpyxl
 ```
 
+### Use with Kiro
+
+1. Open Kiro IDE
+2. Open the `kiro/` skill directory as workspace
+3. In conversation, type `eos report` to start scanning
+
 ## Usage
 
-### Method 1: Claude Code Skill
+### Method 1: Claude Code / Kiro Skill
 
-In Claude Code conversation, say:
+In conversation, say:
 
 ```
 eos report

@@ -18,17 +18,37 @@
 - 双语表头（英文 + 中文）
 - 通过 IAM 角色跨账号扫描
 
-## 前置要求
+## 安装
+
+### 通过 Claude Code 安装 Skill
 
 ```bash
+# 安装 skill 到 kiro 目录
+npx claude-code skill add --path kiro https://github.com/koljahuang/eos-skill.git
+```
+
+### 手动安装
+
+```bash
+# 克隆到 kiro 目录
+git clone https://github.com/koljahuang/eos-skill.git kiro
+
+# 安装依赖
+cd kiro
 pip install boto3 openpyxl
 ```
 
+### 在 Kiro 中使用
+
+1. 打开 Kiro IDE
+2. 打开 `kiro/` skill 目录作为工作区
+3. 在对话中输入 `eos report` 开始扫描
+
 ## 使用方式
 
-### 方式一：Claude Code Skill 调用
+### 方式一：Claude Code / Kiro Skill 调用
 
-在 Claude Code 对话中输入：
+在对话中输入：
 
 ```
 eos report
