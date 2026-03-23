@@ -1,18 +1,13 @@
 """
 AWS resource scanners for EOS (End-of-Support) checking.
-Supports: RDS, ElastiCache, EKS.
+Supports: RDS, ElastiCache, EKS, DocumentDB, OpenSearch, MSK, Lambda, Amazon MQ.
 """
 
 import re
 import boto3
 from typing import Optional
 from .eos_data import lookup_lifecycle, ENGINE_DISPLAY_NAMES
-
-
-def _version_tuple(version_str: str) -> tuple:
-    """Extract numeric version parts for comparison. e.g. '16.6' -> (16, 6)"""
-    parts = re.findall(r'\d+', version_str)
-    return tuple(int(p) for p in parts)
+from .latest_versions import LatestVersionCache, _version_tuple
 
 
 def _is_upgrade(current_version: str, target_version: str) -> bool:
@@ -22,17 +17,35 @@ def _is_upgrade(current_version: str, target_version: str) -> bool:
     try:
         return _version_tuple(target_version) > _version_tuple(current_version)
     except (ValueError, TypeError):
-        return True  # Can't compare, keep the recommendation
+        return True
 
 
-def _build_row(account, region, name, engine, resource_type, instance_type, engine_version, lifecycle) -> dict:
-    """Build a result row dict, suppressing downgrade recommendations."""
-    target = lifecycle.target_version if lifecycle else None
-    upgrade_type = lifecycle.upgrade_type if lifecycle else None
+def _determine_upgrade_type(current: str, target: str) -> str:
+    """Determine if upgrade is Major or Minor based on version comparison."""
+    try:
+        cur = _version_tuple(current)
+        tgt = _version_tuple(target)
+        if cur[0] != tgt[0]:
+            return "Major"
+        return "Minor"
+    except (ValueError, TypeError, IndexError):
+        return "Major"
 
-    # Suppress if current version is already >= target
+
+def _build_row(account, region, name, engine, resource_type, instance_type,
+               engine_version, lifecycle, latest_version=None) -> dict:
+    """Build a result row dict with dynamic latest version check."""
+    target = latest_version or (lifecycle.target_version if lifecycle else None)
+    reason = lifecycle.recommend_reason if lifecycle else "No EOS data available"
+
+    # Check if already on latest version
     if target and not _is_upgrade(engine_version, target):
         target = None
+        upgrade_type = None
+        reason = "Already latest version"
+    elif target:
+        upgrade_type = _determine_upgrade_type(engine_version, target)
+    else:
         upgrade_type = None
 
     return {
@@ -47,7 +60,7 @@ def _build_row(account, region, name, engine, resource_type, instance_type, engi
         "target_version": target,
         "upgrade_type": upgrade_type,
         "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
-        "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
+        "recommend_reason": reason,
     }
 
 
@@ -106,7 +119,7 @@ def _get_session(
     )
 
 
-def scan_rds(session, account: str, region: str) -> list[dict]:
+def scan_rds(session, account: str, region: str, version_cache: LatestVersionCache = None) -> list[dict]:
     """Scan RDS instances and clusters for EOS info."""
     rds = session.client("rds")
     results = []
@@ -118,27 +131,30 @@ def scan_rds(session, account: str, region: str) -> list[dict]:
             engine = db["Engine"]
             version = db["EngineVersion"]
             lifecycle = lookup_lifecycle(engine, version)
+            latest = version_cache.get_latest_rds_version(engine) if version_cache else None
             results.append(_build_row(account, region, db["DBInstanceIdentifier"],
-                ENGINE_DISPLAY_NAMES.get(engine, engine), "RDS", db["DBInstanceClass"], version, lifecycle))
+                ENGINE_DISPLAY_NAMES.get(engine, engine), "RDS", db["DBInstanceClass"],
+                version, lifecycle, latest))
 
     # --- Aurora Clusters ---
     paginator = rds.get_paginator("describe_db_clusters")
     for page in paginator.paginate():
         for cluster in page["DBClusters"]:
             engine = cluster["Engine"]
-            # aurora-mysql -> mysql, aurora-postgresql -> postgres
             lookup_engine = engine.replace("aurora-", "").replace("postgresql", "postgres")
             version = cluster["EngineVersion"]
             lifecycle = lookup_lifecycle(lookup_engine, version)
+            latest = version_cache.get_latest_aurora_version(engine) if version_cache else None
 
             instance_type = cluster.get("DBClusterInstanceClass", "Serverless" if "serverless" in engine else "N/A")
             results.append(_build_row(account, region, cluster["DBClusterIdentifier"],
-                ENGINE_DISPLAY_NAMES.get(lookup_engine, engine), "Aurora", instance_type, version, lifecycle))
+                ENGINE_DISPLAY_NAMES.get(lookup_engine, engine), "Aurora", instance_type,
+                version, lifecycle, latest))
 
     return results
 
 
-def scan_elasticache(session, account: str, region: str) -> list[dict]:
+def scan_elasticache(session, account: str, region: str, version_cache: LatestVersionCache = None) -> list[dict]:
     """Scan ElastiCache clusters/replication groups for EOS info."""
     ec = session.client("elasticache")
     results = []
@@ -147,14 +163,12 @@ def scan_elasticache(session, account: str, region: str) -> list[dict]:
     paginator = ec.get_paginator("describe_replication_groups")
     for page in paginator.paginate():
         for rg in page["ReplicationGroups"]:
-            # Get details from the first node group's member
             cache_node_type = "N/A"
             engine_version = "N/A"
             if rg.get("NodeGroups"):
                 for ng in rg["NodeGroups"]:
                     if ng.get("NodeGroupMembers"):
                         member = ng["NodeGroupMembers"][0]
-                        # Need to describe the cache cluster for version info
                         try:
                             cc_resp = ec.describe_cache_clusters(
                                 CacheClusterId=member["CacheClusterId"],
@@ -168,8 +182,9 @@ def scan_elasticache(session, account: str, region: str) -> list[dict]:
                         break
 
             lifecycle = lookup_lifecycle("redis", engine_version)
+            latest = version_cache.get_latest_elasticache_version("redis") if version_cache else None
             results.append(_build_row(account, region, rg["ReplicationGroupId"],
-                "Redis", "ElastiCache", cache_node_type, engine_version, lifecycle))
+                "Redis", "ElastiCache", cache_node_type, engine_version, lifecycle, latest))
 
     # --- Standalone Memcached Clusters ---
     paginator = ec.get_paginator("describe_cache_clusters")
@@ -179,13 +194,14 @@ def scan_elasticache(session, account: str, region: str) -> list[dict]:
                 continue
             version = cc.get("EngineVersion", "N/A")
             lifecycle = lookup_lifecycle("memcached", version)
+            latest = version_cache.get_latest_elasticache_version("memcached") if version_cache else None
             results.append(_build_row(account, region, cc["CacheClusterId"],
-                "Memcached", "ElastiCache", cc.get("CacheNodeType", "N/A"), version, lifecycle))
+                "Memcached", "ElastiCache", cc.get("CacheNodeType", "N/A"), version, lifecycle, latest))
 
     return results
 
 
-def scan_eks(session, account: str, region: str) -> list[dict]:
+def scan_eks(session, account: str, region: str, version_cache: LatestVersionCache = None) -> list[dict]:
     """Scan EKS clusters for EOS info."""
     eks = session.client("eks")
     results = []
@@ -212,23 +228,25 @@ def scan_eks(session, account: str, region: str) -> list[dict]:
                 pass
 
             it_str = ", ".join(sorted(instance_types)) if instance_types else "N/A"
+            latest = version_cache.get_latest_eks_version() if version_cache else None
             results.append(_build_row(account, region, cluster_name,
-                "Kubernetes", "EKS", it_str, version, lifecycle))
+                "Kubernetes", "EKS", it_str, version, lifecycle, latest))
 
     return results
 
 
-def scan_documentdb(session, account: str, region: str) -> list[dict]:
+def scan_documentdb(session, account: str, region: str, version_cache: LatestVersionCache = None) -> list[dict]:
     """Scan DocumentDB clusters for EOS info."""
     docdb = session.client("docdb")
     results = []
+    latest = version_cache.get_latest_documentdb_version() if version_cache else None
+
     paginator = docdb.get_paginator("describe_db_clusters")
     for page in paginator.paginate():
         for cluster in page["DBClusters"]:
             version = cluster.get("EngineVersion", "N/A")
             lifecycle = lookup_lifecycle("docdb", version)
 
-            # Get instance type from cluster members
             instance_type = "N/A"
             if cluster.get("DBClusterMembers"):
                 try:
@@ -239,12 +257,12 @@ def scan_documentdb(session, account: str, region: str) -> list[dict]:
                     pass
 
             results.append(_build_row(account, region, cluster["DBClusterIdentifier"],
-                "DocumentDB", "DocumentDB", instance_type, version, lifecycle))
+                "DocumentDB", "DocumentDB", instance_type, version, lifecycle, latest))
 
     return results
 
 
-def scan_opensearch(session, account: str, region: str) -> list[dict]:
+def scan_opensearch(session, account: str, region: str, version_cache: LatestVersionCache = None) -> list[dict]:
     """Scan OpenSearch/Elasticsearch domains for EOS info."""
     client = session.client("opensearch")
     results = []
@@ -266,16 +284,18 @@ def scan_opensearch(session, account: str, region: str) -> list[dict]:
         instance_type = cluster_config.get("InstanceType", "N/A")
 
         engine_name = "OpenSearch" if "OpenSearch" in engine_version else "Elasticsearch"
+        latest = version_cache.get_latest_opensearch_version() if version_cache else None
         results.append(_build_row(account, region, domain["DomainName"],
-            engine_name, "OpenSearch", instance_type, engine_version, lifecycle))
+            engine_name, "OpenSearch", instance_type, engine_version, lifecycle, latest))
 
     return results
 
 
-def scan_msk(session, account: str, region: str) -> list[dict]:
+def scan_msk(session, account: str, region: str, version_cache: LatestVersionCache = None) -> list[dict]:
     """Scan MSK Kafka clusters for EOS info."""
     client = session.client("kafka")
     results = []
+    latest = version_cache.get_latest_msk_version() if version_cache else None
 
     paginator = client.get_paginator("list_clusters_v2")
     for page in paginator.paginate():
@@ -289,18 +309,17 @@ def scan_msk(session, account: str, region: str) -> list[dict]:
                 broker_nodes = prov.get("BrokerNodeGroupInfo", {})
                 instance_type = broker_nodes.get("InstanceType", "N/A")
             else:
-                # Serverless
                 version = "Serverless"
                 instance_type = "Serverless"
 
             lifecycle = lookup_lifecycle("kafka", version)
             results.append(_build_row(account, region, cluster_name,
-                "Kafka", "MSK", instance_type, version, lifecycle))
+                "Kafka", "MSK", instance_type, version, lifecycle, latest))
 
     return results
 
 
-def scan_lambda(session, account: str, region: str) -> list[dict]:
+def scan_lambda(session, account: str, region: str, version_cache: LatestVersionCache = None) -> list[dict]:
     """Scan Lambda functions for deprecated runtimes."""
     client = session.client("lambda")
     results = []
@@ -310,12 +329,14 @@ def scan_lambda(session, account: str, region: str) -> list[dict]:
         for func in page["Functions"]:
             runtime = func.get("Runtime")
             if not runtime:
-                continue  # Skip container image or custom runtimes
+                continue
 
             lifecycle = lookup_lifecycle("lambda", runtime)
             if not lifecycle:
-                continue  # Skip unknown/current runtimes with no EOS concern
+                continue
 
+            # For Lambda, latest_version comes from eos_data (static per runtime family)
+            # No dynamic API for "latest runtime", so use lifecycle target
             it_str = f'{func.get("MemorySize", "N/A")}MB / {func.get("Architectures", ["N/A"])[0]}'
             results.append(_build_row(account, region, func["FunctionName"],
                 "Lambda", "Lambda", it_str, runtime, lifecycle))
@@ -323,7 +344,7 @@ def scan_lambda(session, account: str, region: str) -> list[dict]:
     return results
 
 
-def scan_amazonmq(session, account: str, region: str) -> list[dict]:
+def scan_amazonmq(session, account: str, region: str, version_cache: LatestVersionCache = None) -> list[dict]:
     """Scan Amazon MQ brokers (ActiveMQ, RabbitMQ) for EOS info."""
     client = session.client("mq")
     results = []
@@ -338,10 +359,11 @@ def scan_amazonmq(session, account: str, region: str) -> list[dict]:
             version = broker.get("EngineVersion", "N/A")
             lookup_engine = "activemq" if engine == "ACTIVEMQ" else "rabbitmq"
             lifecycle = lookup_lifecycle(lookup_engine, version)
+            latest = version_cache.get_latest_amazonmq_version(engine) if version_cache else None
 
             results.append(_build_row(account, region, broker.get("BrokerName", broker_id),
                 ENGINE_DISPLAY_NAMES.get(lookup_engine, engine), "Amazon MQ",
-                broker.get("HostInstanceType", "N/A"), version, lifecycle))
+                broker.get("HostInstanceType", "N/A"), version, lifecycle, latest))
 
     return results
 
@@ -383,13 +405,16 @@ def run_scan(
                 print(f"  Failed to get session: {e}")
                 continue
 
+            version_cache = LatestVersionCache(session)
+            print(f"  Fetching latest available versions ...")
+
             for rt in resource_types:
                 scanner = SCANNERS.get(rt.lower())
                 if not scanner:
                     print(f"  Unknown resource type: {rt}")
                     continue
                 try:
-                    rows = scanner(session, account, region)
+                    rows = scanner(session, account, region, version_cache=version_cache)
                     print(f"  {rt}: found {len(rows)} resources")
                     all_results.extend(rows)
                 except Exception as e:
