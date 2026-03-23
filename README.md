@@ -222,7 +222,7 @@ The upgrade type is determined by engine-specific version comparison rules:
 | **PostgreSQL** | First part (`X`) | 13 → 16, 15 → 16 | 16.4 → 16.13 |
 | **MariaDB** | First 2 parts (`X.Y`) | 10.4 → 10.11, 10.6 → 10.11 | 10.11.6 → 10.11.8 |
 | **Redis** | First part (`X`) | 6 → 7 | 6.0 → 6.2 |
-| **EKS** | Minor version gap > 1 | 1.29 → 1.35 | 1.34 → 1.35 |
+| **EKS** | First 2 parts (`1.Y`) | 1.29 → 1.30, 1.29 → 1.35 | Patch only (e.g., platform version) |
 | **DocumentDB** | First part (`X`) | 3.6 → 5.0, 4.0 → 5.0 | — |
 | **Neptune** | First 2 parts (`X.Y`) | 1.2 → 1.3, 1.3 → 1.4 | 1.3.2.1 → 1.3.3.0 |
 | **OpenSearch** | First part (`X`) | 1.3 → 2.11 | 2.3 → 2.11 |

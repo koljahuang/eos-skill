@@ -23,7 +23,8 @@ def _is_upgrade(current_version: str, target_version: str) -> bool:
 
 # Engines where major version is defined by first TWO version parts
 # e.g., MySQL 8.0→8.4 is Major, 8.0.35→8.0.40 is Minor
-_TWO_PART_MAJOR = {"mysql", "mariadb", "neptune", "activemq", "rabbitmq"}
+# EKS: every minor version bump (1.29→1.30) involves API deprecation, so Major
+_TWO_PART_MAJOR = {"mysql", "mariadb", "kubernetes", "neptune", "activemq", "rabbitmq"}
 
 
 def _determine_upgrade_type(current: str, target: str, engine: str = "") -> str:
@@ -31,8 +32,7 @@ def _determine_upgrade_type(current: str, target: str, engine: str = "") -> str:
     Determine if upgrade is Major or Minor based on engine-specific version comparison.
 
     Rules by engine:
-    - mysql, mariadb, neptune, activemq, rabbitmq: compare first TWO parts
-    - kubernetes: >1 minor version gap = Major, 1 = Minor
+    - mysql, mariadb, kubernetes, neptune, activemq, rabbitmq: compare first TWO parts
     - postgres, redis, docdb, opensearch, kafka: compare FIRST part
     - lambda: compare runtime version number
     """
@@ -42,13 +42,8 @@ def _determine_upgrade_type(current: str, target: str, engine: str = "") -> str:
         engine_lower = engine.lower() if engine else ""
 
         if engine_lower in _TWO_PART_MAJOR:
-            # Compare first two parts: MySQL 8.0≠8.4 → Major
+            # Compare first two parts: MySQL 8.0≠8.4 → Major, EKS 1.29≠1.30 → Major
             if cur[:2] != tgt[:2]:
-                return "Major"
-            return "Minor"
-        elif engine_lower == "kubernetes":
-            # EKS: >1 minor version gap = Major, exactly 1 = Minor
-            if len(cur) >= 2 and len(tgt) >= 2 and abs(tgt[1] - cur[1]) > 1:
                 return "Major"
             return "Minor"
         else:
