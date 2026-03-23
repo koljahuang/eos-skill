@@ -3,9 +3,52 @@ AWS resource scanners for EOS (End-of-Support) checking.
 Supports: RDS, ElastiCache, EKS.
 """
 
+import re
 import boto3
 from typing import Optional
 from .eos_data import lookup_lifecycle, ENGINE_DISPLAY_NAMES
+
+
+def _version_tuple(version_str: str) -> tuple:
+    """Extract numeric version parts for comparison. e.g. '16.6' -> (16, 6)"""
+    parts = re.findall(r'\d+', version_str)
+    return tuple(int(p) for p in parts)
+
+
+def _is_upgrade(current_version: str, target_version: str) -> bool:
+    """Return True only if target_version is actually newer than current_version."""
+    if not target_version:
+        return False
+    try:
+        return _version_tuple(target_version) > _version_tuple(current_version)
+    except (ValueError, TypeError):
+        return True  # Can't compare, keep the recommendation
+
+
+def _build_row(account, region, name, engine, resource_type, instance_type, engine_version, lifecycle) -> dict:
+    """Build a result row dict, suppressing downgrade recommendations."""
+    target = lifecycle.target_version if lifecycle else None
+    upgrade_type = lifecycle.upgrade_type if lifecycle else None
+
+    # Suppress if current version is already >= target
+    if target and not _is_upgrade(engine_version, target):
+        target = None
+        upgrade_type = None
+
+    return {
+        "account": account,
+        "region": region,
+        "name": name,
+        "engine": engine,
+        "resource_type": resource_type,
+        "instance_type": instance_type,
+        "engine_version": engine_version,
+        "eos_date": lifecycle.eos_date if lifecycle else None,
+        "target_version": target,
+        "upgrade_type": upgrade_type,
+        "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
+        "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
+    }
 
 
 def _get_base_session(
@@ -75,22 +118,8 @@ def scan_rds(session, account: str, region: str) -> list[dict]:
             engine = db["Engine"]
             version = db["EngineVersion"]
             lifecycle = lookup_lifecycle(engine, version)
-
-            row = {
-                "account": account,
-                "region": region,
-                "name": db["DBInstanceIdentifier"],
-                "engine": ENGINE_DISPLAY_NAMES.get(engine, engine),
-                "resource_type": "RDS",
-                "instance_type": db["DBInstanceClass"],
-                "engine_version": version,
-                "eos_date": lifecycle.eos_date if lifecycle else None,
-                "target_version": lifecycle.target_version if lifecycle else None,
-                "upgrade_type": lifecycle.upgrade_type if lifecycle else None,
-                "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
-                "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
-            }
-            results.append(row)
+            results.append(_build_row(account, region, db["DBInstanceIdentifier"],
+                ENGINE_DISPLAY_NAMES.get(engine, engine), "RDS", db["DBInstanceClass"], version, lifecycle))
 
     # --- Aurora Clusters ---
     paginator = rds.get_paginator("describe_db_clusters")
@@ -102,21 +131,9 @@ def scan_rds(session, account: str, region: str) -> list[dict]:
             version = cluster["EngineVersion"]
             lifecycle = lookup_lifecycle(lookup_engine, version)
 
-            row = {
-                "account": account,
-                "region": region,
-                "name": cluster["DBClusterIdentifier"],
-                "engine": ENGINE_DISPLAY_NAMES.get(lookup_engine, engine),
-                "resource_type": "Aurora",
-                "instance_type": cluster.get("DBClusterInstanceClass", "Serverless" if "serverless" in engine else "N/A"),
-                "engine_version": version,
-                "eos_date": lifecycle.eos_date if lifecycle else None,
-                "target_version": lifecycle.target_version if lifecycle else None,
-                "upgrade_type": lifecycle.upgrade_type if lifecycle else None,
-                "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
-                "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
-            }
-            results.append(row)
+            instance_type = cluster.get("DBClusterInstanceClass", "Serverless" if "serverless" in engine else "N/A")
+            results.append(_build_row(account, region, cluster["DBClusterIdentifier"],
+                ENGINE_DISPLAY_NAMES.get(lookup_engine, engine), "Aurora", instance_type, version, lifecycle))
 
     return results
 
@@ -151,22 +168,8 @@ def scan_elasticache(session, account: str, region: str) -> list[dict]:
                         break
 
             lifecycle = lookup_lifecycle("redis", engine_version)
-
-            row = {
-                "account": account,
-                "region": region,
-                "name": rg["ReplicationGroupId"],
-                "engine": "Redis",
-                "resource_type": "ElastiCache",
-                "instance_type": cache_node_type,
-                "engine_version": engine_version,
-                "eos_date": lifecycle.eos_date if lifecycle else None,
-                "target_version": lifecycle.target_version if lifecycle else None,
-                "upgrade_type": lifecycle.upgrade_type if lifecycle else None,
-                "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
-                "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
-            }
-            results.append(row)
+            results.append(_build_row(account, region, rg["ReplicationGroupId"],
+                "Redis", "ElastiCache", cache_node_type, engine_version, lifecycle))
 
     # --- Standalone Memcached Clusters ---
     paginator = ec.get_paginator("describe_cache_clusters")
@@ -176,22 +179,8 @@ def scan_elasticache(session, account: str, region: str) -> list[dict]:
                 continue
             version = cc.get("EngineVersion", "N/A")
             lifecycle = lookup_lifecycle("memcached", version)
-
-            row = {
-                "account": account,
-                "region": region,
-                "name": cc["CacheClusterId"],
-                "engine": "Memcached",
-                "resource_type": "ElastiCache",
-                "instance_type": cc.get("CacheNodeType", "N/A"),
-                "engine_version": version,
-                "eos_date": lifecycle.eos_date if lifecycle else None,
-                "target_version": lifecycle.target_version if lifecycle else None,
-                "upgrade_type": lifecycle.upgrade_type if lifecycle else None,
-                "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
-                "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
-            }
-            results.append(row)
+            results.append(_build_row(account, region, cc["CacheClusterId"],
+                "Memcached", "ElastiCache", cc.get("CacheNodeType", "N/A"), version, lifecycle))
 
     return results
 
@@ -222,31 +211,17 @@ def scan_eks(session, account: str, region: str) -> list[dict]:
             except Exception:
                 pass
 
-            row = {
-                "account": account,
-                "region": region,
-                "name": cluster_name,
-                "engine": "Kubernetes",
-                "resource_type": "EKS",
-                "instance_type": ", ".join(sorted(instance_types)) if instance_types else "N/A",
-                "engine_version": version,
-                "eos_date": lifecycle.eos_date if lifecycle else None,
-                "target_version": lifecycle.target_version if lifecycle else None,
-                "upgrade_type": lifecycle.upgrade_type if lifecycle else None,
-                "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
-                "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
-            }
-            results.append(row)
+            it_str = ", ".join(sorted(instance_types)) if instance_types else "N/A"
+            results.append(_build_row(account, region, cluster_name,
+                "Kubernetes", "EKS", it_str, version, lifecycle))
 
     return results
 
 
 def scan_documentdb(session, account: str, region: str) -> list[dict]:
     """Scan DocumentDB clusters for EOS info."""
-    rds = session.client("rds")
-    results = []
-
     docdb = session.client("docdb")
+    results = []
     paginator = docdb.get_paginator("describe_db_clusters")
     for page in paginator.paginate():
         for cluster in page["DBClusters"]:
@@ -263,21 +238,8 @@ def scan_documentdb(session, account: str, region: str) -> list[dict]:
                 except Exception:
                     pass
 
-            row = {
-                "account": account,
-                "region": region,
-                "name": cluster["DBClusterIdentifier"],
-                "engine": "DocumentDB",
-                "resource_type": "DocumentDB",
-                "instance_type": instance_type,
-                "engine_version": version,
-                "eos_date": lifecycle.eos_date if lifecycle else None,
-                "target_version": lifecycle.target_version if lifecycle else None,
-                "upgrade_type": lifecycle.upgrade_type if lifecycle else None,
-                "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
-                "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
-            }
-            results.append(row)
+            results.append(_build_row(account, region, cluster["DBClusterIdentifier"],
+                "DocumentDB", "DocumentDB", instance_type, version, lifecycle))
 
     return results
 
@@ -303,21 +265,9 @@ def scan_opensearch(session, account: str, region: str) -> list[dict]:
         cluster_config = domain.get("ClusterConfig", {})
         instance_type = cluster_config.get("InstanceType", "N/A")
 
-        row = {
-            "account": account,
-            "region": region,
-            "name": domain["DomainName"],
-            "engine": "OpenSearch" if "OpenSearch" in engine_version else "Elasticsearch",
-            "resource_type": "OpenSearch",
-            "instance_type": instance_type,
-            "engine_version": engine_version,
-            "eos_date": lifecycle.eos_date if lifecycle else None,
-            "target_version": lifecycle.target_version if lifecycle else None,
-            "upgrade_type": lifecycle.upgrade_type if lifecycle else None,
-            "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
-            "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
-        }
-        results.append(row)
+        engine_name = "OpenSearch" if "OpenSearch" in engine_version else "Elasticsearch"
+        results.append(_build_row(account, region, domain["DomainName"],
+            engine_name, "OpenSearch", instance_type, engine_version, lifecycle))
 
     return results
 
@@ -344,22 +294,8 @@ def scan_msk(session, account: str, region: str) -> list[dict]:
                 instance_type = "Serverless"
 
             lifecycle = lookup_lifecycle("kafka", version)
-
-            row = {
-                "account": account,
-                "region": region,
-                "name": cluster_name,
-                "engine": "Kafka",
-                "resource_type": "MSK",
-                "instance_type": instance_type,
-                "engine_version": version,
-                "eos_date": lifecycle.eos_date if lifecycle else None,
-                "target_version": lifecycle.target_version if lifecycle else None,
-                "upgrade_type": lifecycle.upgrade_type if lifecycle else None,
-                "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
-                "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
-            }
-            results.append(row)
+            results.append(_build_row(account, region, cluster_name,
+                "Kafka", "MSK", instance_type, version, lifecycle))
 
     return results
 
@@ -380,21 +316,9 @@ def scan_lambda(session, account: str, region: str) -> list[dict]:
             if not lifecycle:
                 continue  # Skip unknown/current runtimes with no EOS concern
 
-            row = {
-                "account": account,
-                "region": region,
-                "name": func["FunctionName"],
-                "engine": "Lambda",
-                "resource_type": "Lambda",
-                "instance_type": f'{func.get("MemorySize", "N/A")}MB / {func.get("Architectures", ["N/A"])[0]}',
-                "engine_version": runtime,
-                "eos_date": lifecycle.eos_date,
-                "target_version": lifecycle.target_version,
-                "upgrade_type": lifecycle.upgrade_type,
-                "recommend_instance_type": None,
-                "recommend_reason": lifecycle.recommend_reason,
-            }
-            results.append(row)
+            it_str = f'{func.get("MemorySize", "N/A")}MB / {func.get("Architectures", ["N/A"])[0]}'
+            results.append(_build_row(account, region, func["FunctionName"],
+                "Lambda", "Lambda", it_str, runtime, lifecycle))
 
     return results
 
@@ -415,21 +339,9 @@ def scan_amazonmq(session, account: str, region: str) -> list[dict]:
             lookup_engine = "activemq" if engine == "ACTIVEMQ" else "rabbitmq"
             lifecycle = lookup_lifecycle(lookup_engine, version)
 
-            row = {
-                "account": account,
-                "region": region,
-                "name": broker.get("BrokerName", broker_id),
-                "engine": ENGINE_DISPLAY_NAMES.get(lookup_engine, engine),
-                "resource_type": "Amazon MQ",
-                "instance_type": broker.get("HostInstanceType", "N/A"),
-                "engine_version": version,
-                "eos_date": lifecycle.eos_date if lifecycle else None,
-                "target_version": lifecycle.target_version if lifecycle else None,
-                "upgrade_type": lifecycle.upgrade_type if lifecycle else None,
-                "recommend_instance_type": lifecycle.recommend_instance_type if lifecycle else None,
-                "recommend_reason": lifecycle.recommend_reason if lifecycle else "No EOS data available",
-            }
-            results.append(row)
+            results.append(_build_row(account, region, broker.get("BrokerName", broker_id),
+                ENGINE_DISPLAY_NAMES.get(lookup_engine, engine), "Amazon MQ",
+                broker.get("HostInstanceType", "N/A"), version, lifecycle))
 
     return results
 
