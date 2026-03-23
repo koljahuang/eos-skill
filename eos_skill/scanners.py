@@ -246,8 +246,9 @@ def scan_documentdb(session, account: str, region: str) -> list[dict]:
     rds = session.client("rds")
     results = []
 
-    paginator = rds.get_paginator("describe_db_clusters")
-    for page in paginator.paginate(Filters=[{"Name": "engine", "Values": ["docdb"]}]):
+    docdb = session.client("docdb")
+    paginator = docdb.get_paginator("describe_db_clusters")
+    for page in paginator.paginate():
         for cluster in page["DBClusters"]:
             version = cluster.get("EngineVersion", "N/A")
             lifecycle = lookup_lifecycle("docdb", version)
@@ -257,7 +258,7 @@ def scan_documentdb(session, account: str, region: str) -> list[dict]:
             if cluster.get("DBClusterMembers"):
                 try:
                     member_id = cluster["DBClusterMembers"][0]["DBInstanceIdentifier"]
-                    inst = rds.describe_db_instances(DBInstanceIdentifier=member_id)
+                    inst = docdb.describe_db_instances(DBInstanceIdentifier=member_id)
                     instance_type = inst["DBInstances"][0].get("DBInstanceClass", "N/A")
                 except Exception:
                     pass
