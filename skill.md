@@ -1,5 +1,5 @@
 ---
-name: eos-scan
+name: eos-skill
 description: Scan AWS resources (RDS, ElastiCache, EKS, DocumentDB, OpenSearch, MSK, Lambda, Amazon MQ) for End-of-Support (EOS) status and generate an Excel upgrade report.
 trigger: When the user wants to check AWS resources for end-of-support versions, generate EOS reports, or plan AWS version upgrades.
 ---
@@ -50,30 +50,27 @@ pip install boto3 openpyxl
 
 ### Step 3: Execute Scan
 
-Run the scanner using the Python modules in this skill's directory:
+**IMPORTANT**: The `eos_skill` Python package lives inside this skill's directory. You MUST set `PYTHONPATH` to this skill's directory or `cd` into it before running the command.
 
 ```bash
-# Using AWS profile
-python -m eos_skill.main \
+# Set PYTHONPATH to the skill directory (adjust path based on where the skill is installed)
+# For Kiro: .kiro/skills/eos-skill
+# For Claude Code: .claude/skills/eos-skill
+# Then run:
+
+PYTHONPATH=<SKILL_DIR> python -m eos_skill.main \
   --profile <PROFILE_NAME> \
   --accounts <ACCOUNT_IDS> \
   --regions <REGIONS> \
   --resource-types <TYPES> \
-  --role-name <ROLE_NAME> \
   --output <OUTPUT_PATH>
 
-# Using AK/SK
-python -m eos_skill.main \
-  --access-key <ACCESS_KEY> --secret-key <SECRET_KEY> \
+# Or cd into the skill directory first:
+cd <SKILL_DIR> && python -m eos_skill.main \
+  --profile <PROFILE_NAME> \
   --accounts <ACCOUNT_IDS> \
   --regions <REGIONS> \
-  --resource-types <TYPES> \
   --output <OUTPUT_PATH>
-
-# Using default credentials
-python -m eos_skill.main \
-  --accounts <ACCOUNT_IDS> \
-  --regions <REGIONS>
 ```
 
 The scan will:
