@@ -10,6 +10,7 @@ Scan AWS resources for End-of-Support (EOS) status and generate an Excel upgrade
 - Scan ElastiCache clusters (Redis, Memcached)
 - Scan EKS Kubernetes clusters
 - Scan DocumentDB clusters (MongoDB-compatible)
+- Scan Neptune graph database clusters
 - Scan OpenSearch / Elasticsearch domains
 - Scan MSK Kafka clusters
 - Scan Lambda functions for deprecated runtimes
@@ -163,7 +164,7 @@ python -m eos_skill.main \
 | `--profile` | No | AWS CLI profile name |
 | `--access-key` | No | AWS Access Key ID (requires `--secret-key`) |
 | `--secret-key` | No | AWS Secret Access Key (requires `--access-key`) |
-| `--resource-types` | No | `rds`, `elasticache`, `eks`, `documentdb`, `opensearch`, `msk`, `lambda`, `amazonmq` (default: all) |
+| `--resource-types` | No | `rds`, `elasticache`, `eks`, `documentdb`, `neptune`, `opensearch`, `msk`, `lambda`, `amazonmq` (default: all) |
 | `--role-name` | No | Cross-account IAM role (default: `OrganizationAccountAccessRole`) |
 | `--output` | No | Output file path (default: `eos_report_<timestamp>.xlsx`) |
 
@@ -175,7 +176,7 @@ python -m eos_skill.main \
 | 2 | Region | AWS region |
 | 3 | Cluster/Instance Name | Resource identifier |
 | 4 | Engine | MySQL, PostgreSQL, Redis, etc. |
-| 5 | Resource Type | RDS, Aurora, ElastiCache, EKS, DocumentDB, OpenSearch, MSK, Lambda, Amazon MQ |
+| 5 | Resource Type | RDS, Aurora, ElastiCache, EKS, DocumentDB, Neptune, OpenSearch, MSK, Lambda, Amazon MQ |
 | 6 | Instance Type | e.g., db.t3.medium |
 | 7 | Engine Version | Current version |
 | 8 | End of Support Date | Standard support end date (from endoflife.date) |

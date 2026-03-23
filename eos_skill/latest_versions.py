@@ -141,6 +141,23 @@ class LatestVersionCache:
         self._cache[key] = result
         return result
 
+    def get_latest_neptune_version(self) -> str | None:
+        """Get latest Neptune engine version."""
+        key = self._cache_key("neptune", "neptune")
+        if key in self._cache:
+            return self._cache[key]
+
+        client = self._session.client("neptune")
+        try:
+            resp = client.describe_db_engine_versions(Engine="neptune")
+            versions = [v["EngineVersion"] for v in resp["DBEngineVersions"]]
+            result = _max_version(versions)
+        except Exception:
+            result = None
+
+        self._cache[key] = result
+        return result
+
     def get_latest_opensearch_version(self) -> str | None:
         """Get latest OpenSearch version."""
         key = self._cache_key("opensearch", "opensearch")

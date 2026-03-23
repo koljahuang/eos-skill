@@ -19,6 +19,7 @@ PRODUCT_MAP = {
     "redis": "amazon-elasticache-redis",
     "kubernetes": "amazon-eks",
     "docdb": "amazon-documentdb",
+    "neptune": "amazon-neptune",
     "opensearch": "amazon-opensearch",
     "kafka": "amazon-msk",
     "lambda": "aws-lambda",
@@ -83,9 +84,15 @@ def lookup_eol(engine: str, cycle: str) -> dict | None:
             eol_date = _parse_date(eol_raw) if eol_raw is not False else None
             extended_support_date = _parse_date(ext_raw) if ext_raw is not False else None
 
+            # Some products (e.g., Neptune) provide upgradeVersion
+            upgrade_version = entry.get("upgradeVersion")
+            if upgrade_version == "N/A":
+                upgrade_version = None
+
             return {
                 "eol_date": eol_date,
                 "extended_support_date": extended_support_date,
+                "upgrade_version": upgrade_version,
             }
 
     return None

@@ -10,6 +10,7 @@
 - 扫描 ElastiCache 集群（Redis、Memcached）
 - 扫描 EKS Kubernetes 集群
 - 扫描 DocumentDB 集群（MongoDB 兼容）
+- 扫描 Neptune 图数据库集群
 - 扫描 OpenSearch / Elasticsearch 域
 - 扫描 MSK Kafka 集群
 - 扫描 Lambda 函数（运行时弃用检测）
@@ -163,7 +164,7 @@ python -m eos_skill.main \
 | `--profile` | 否 | AWS CLI 配置名 |
 | `--access-key` | 否 | AWS Access Key ID（需配合 `--secret-key`） |
 | `--secret-key` | 否 | AWS Secret Access Key（需配合 `--access-key`） |
-| `--resource-types` | 否 | `rds`、`elasticache`、`eks`、`documentdb`、`opensearch`、`msk`、`lambda`、`amazonmq`（默认扫描全部） |
+| `--resource-types` | 否 | `rds`、`elasticache`、`eks`、`documentdb`、`neptune`、`opensearch`、`msk`、`lambda`、`amazonmq`（默认扫描全部） |
 | `--role-name` | 否 | 跨账号 IAM 角色名（默认: `OrganizationAccountAccessRole`） |
 | `--output` | 否 | 输出文件路径（默认: `eos_report_<timestamp>.xlsx`） |
 
@@ -175,7 +176,7 @@ python -m eos_skill.main \
 | 2 | Region (区域) | 资源物理区域 |
 | 3 | Cluster/Instance Name (集群/实例名称) | 数据库或集群的唯一标识 |
 | 4 | Engine (引擎) | MySQL、PostgreSQL、Redis 等 |
-| 5 | Resource Type (资源类型) | RDS、Aurora、ElastiCache、EKS、DocumentDB、OpenSearch、MSK、Lambda、Amazon MQ |
+| 5 | Resource Type (资源类型) | RDS、Aurora、ElastiCache、EKS、DocumentDB、Neptune、OpenSearch、MSK、Lambda、Amazon MQ |
 | 6 | Instance Type (实例类型) | 当前规格（如 db.t3.medium） |
 | 7 | Engine Version (引擎版本) | 当前运行的版本号 |
 | 8 | End of Support Date (停止支持日期) | 标准支持截止日期（来自 endoflife.date） |

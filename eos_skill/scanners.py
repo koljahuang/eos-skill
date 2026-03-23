@@ -80,6 +80,14 @@ def _build_row(account, region, name, engine, resource_type, instance_type,
         if eol_info:
             eol_date = eol_info.get("eol_date")
             extended_support_date = eol_info.get("extended_support_date")
+            # Use upgradeVersion from endoflife.date as fallback
+            if not target and eol_info.get("upgrade_version"):
+                target = eol_info["upgrade_version"]
+                if not _is_upgrade(engine_version, target):
+                    target = None
+                    upgrade_type = None
+                else:
+                    upgrade_type = _determine_upgrade_type(engine_version, target)
 
     return {
         "account": account,
@@ -308,6 +316,38 @@ def scan_documentdb(session, account: str, region: str, version_cache: LatestVer
     return results
 
 
+def scan_neptune(session, account: str, region: str, version_cache: LatestVersionCache = None) -> list[dict]:
+    """Scan Neptune DB clusters for EOS info."""
+    client = session.client("neptune")
+    results = []
+    latest = version_cache.get_latest_neptune_version() if version_cache else None
+
+    paginator = client.get_paginator("describe_db_clusters")
+    for page in paginator.paginate():
+        for cluster in page["DBClusters"]:
+            if cluster.get("Engine") != "neptune":
+                continue
+            version = cluster.get("EngineVersion", "N/A")
+            lifecycle = lookup_lifecycle("neptune", version)
+
+            instance_type = "N/A"
+            if cluster.get("DBClusterMembers"):
+                try:
+                    member_id = cluster["DBClusterMembers"][0]["DBInstanceIdentifier"]
+                    inst = client.describe_db_instances(DBInstanceIdentifier=member_id)
+                    instance_type = inst["DBInstances"][0].get("DBInstanceClass", "N/A")
+                except Exception:
+                    pass
+
+            # Neptune endoflife.date uses full version as cycle
+            eol_cycle = version
+            results.append(_build_row(account, region, cluster["DBClusterIdentifier"],
+                "Neptune", "Neptune", instance_type, version, lifecycle,
+                eol_engine="neptune", eol_cycle=eol_cycle, latest_version=latest))
+
+    return results
+
+
 def scan_opensearch(session, account: str, region: str, version_cache: LatestVersionCache = None) -> list[dict]:
     """Scan OpenSearch/Elasticsearch domains for EOS info."""
     client = session.client("opensearch")
@@ -427,6 +467,7 @@ SCANNERS = {
     "opensearch": scan_opensearch,
     "msk": scan_msk,
     "lambda": scan_lambda,
+    "neptune": scan_neptune,
     "amazonmq": scan_amazonmq,
 }
 

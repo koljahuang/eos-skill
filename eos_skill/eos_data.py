@@ -93,6 +93,14 @@ DOCUMENTDB = {
 }
 
 # ---------------------------------------------------------------------------
+# Neptune
+# ---------------------------------------------------------------------------
+# Neptune uses full version as cycle on endoflife.date (e.g., "1.3.2.1")
+# and provides upgradeVersion. We keep minimal static data here;
+# EOL dates come from endoflife.date API.
+NEPTUNE = {}  # No static target mapping needed; endoflife.date has upgradeVersion
+
+# ---------------------------------------------------------------------------
 # OpenSearch Service
 # ---------------------------------------------------------------------------
 OPENSEARCH = {
@@ -188,6 +196,9 @@ def _extract_major(version_str: str, engine: str) -> str:
         return ".".join(parts[:2]) if len(parts) >= 2 else parts[0]
     elif engine == "docdb":
         return ".".join(parts[:2]) if len(parts) >= 2 else parts[0]
+    elif engine == "neptune":
+        # Neptune: full version like 1.3.2.1
+        return version_str
     elif engine == "opensearch":
         # OpenSearch_2.11 or Elasticsearch_7.10 -> extract version part
         for prefix in ("OpenSearch_", "Elasticsearch_"):
@@ -212,6 +223,7 @@ _ENGINE_MAP = {
     "memcached": ELASTICACHE_MEMCACHED,
     "kubernetes": EKS_KUBERNETES,
     "docdb": DOCUMENTDB,
+    "neptune": NEPTUNE,
     "opensearch": OPENSEARCH,
     "kafka": MSK_KAFKA,
     "lambda": LAMBDA_RUNTIMES,
@@ -228,6 +240,7 @@ ENGINE_DISPLAY_NAMES = {
     "memcached": "Memcached",
     "kubernetes": "Kubernetes",
     "docdb": "DocumentDB",
+    "neptune": "Neptune",
     "opensearch": "OpenSearch",
     "kafka": "Kafka",
     "lambda": "Lambda",
