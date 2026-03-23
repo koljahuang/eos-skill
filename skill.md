@@ -70,21 +70,22 @@ The scan will:
 
 ### Step 4: Generate Report
 
-The Excel report contains these 11 columns:
+The Excel report contains these 12 columns:
 
 | # | Field (EN) | Field (CN) | Description |
 |---|-----------|-----------|-------------|
 | 1 | Account | 账号 | Resource's AWS account |
 | 2 | Region | 区域 | Resource's AWS region |
-| 3 | Cluster/Instance Name | 集群/实例名称 | Unique identifier |
-| 4 | Engine | 引擎 | MySQL, PostgreSQL, Redis, etc. |
-| 5 | Resource Type | 资源类型 | RDS, Aurora, ElastiCache, EKS, DocumentDB, Neptune, OpenSearch, MSK, Lambda, Amazon MQ |
-| 6 | Instance Type | 实例类型 | Current spec (e.g., db.t3.medium) |
-| 7 | Engine Version | 引擎版本 | Current running version |
-| 8 | End of Support Date | 停止支持日期 | Standard support end date (from endoflife.date) |
-| 9 | Extended Support Date | 延长支持日期 | Extended support end date |
-| 10 | Target Engine Version | 目标版本号 | Recommended upgrade version |
-| 11 | Upgrade Type | 更新类型 | Major or Minor |
+| 3 | Cluster Name | 集群名称 | Cluster/domain/replication group name |
+| 4 | Instance Name | 实例名称 | Member instance(s) or standalone resource name |
+| 5 | Engine | 引擎 | MySQL, PostgreSQL, Redis, etc. |
+| 6 | Resource Type | 资源类型 | RDS, Aurora, ElastiCache, EKS, DocumentDB, Neptune, OpenSearch, MSK, Lambda, Amazon MQ |
+| 7 | Instance Type | 实例类型 | Current spec (e.g., db.t3.medium) |
+| 8 | Engine Version | 引擎版本 | Current running version |
+| 9 | End of Support Date | 停止支持日期 | Standard support end date (from endoflife.date) |
+| 10 | Extended Support Date | 延长支持日期 | Extended support end date |
+| 11 | Target Engine Version | 目标版本号 | Recommended upgrade version |
+| 12 | Upgrade Type | 更新类型 | Major or Minor |
 
 Report features:
 - **Color coding**: Red = expired, Yellow = expiring within 6 months, Green = safe

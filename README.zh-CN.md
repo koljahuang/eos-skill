@@ -174,15 +174,16 @@ python -m eos_skill.main \
 |---|---------|------|
 | 1 | Account (账号) | 资源所属 AWS 账号 |
 | 2 | Region (区域) | 资源物理区域 |
-| 3 | Cluster/Instance Name (集群/实例名称) | 数据库或集群的唯一标识 |
-| 4 | Engine (引擎) | MySQL、PostgreSQL、Redis 等 |
-| 5 | Resource Type (资源类型) | RDS、Aurora、ElastiCache、EKS、DocumentDB、Neptune、OpenSearch、MSK、Lambda、Amazon MQ |
-| 6 | Instance Type (实例类型) | 当前规格（如 db.t3.medium） |
-| 7 | Engine Version (引擎版本) | 当前运行的版本号 |
-| 8 | End of Support Date (停止支持日期) | 标准支持截止日期（来自 endoflife.date） |
-| 9 | Extended Support Date (延长支持日期) | 延长支持截止日期 |
-| 10 | Target Engine Version (目标版本号) | 建议升级到的具体版本 |
-| 11 | Upgrade Type (更新类型) | Major（大版本）/ Minor（小版本） |
+| 3 | Cluster Name (集群名称) | 集群/域/复制组名称 |
+| 4 | Instance Name (实例名称) | 成员实例或独立资源名称 |
+| 5 | Engine (引擎) | MySQL、PostgreSQL、Redis 等 |
+| 6 | Resource Type (资源类型) | RDS、Aurora、ElastiCache、EKS、DocumentDB、Neptune、OpenSearch、MSK、Lambda、Amazon MQ |
+| 7 | Instance Type (实例类型) | 当前规格（如 db.t3.medium） |
+| 8 | Engine Version (引擎版本) | 当前运行的版本号 |
+| 9 | End of Support Date (停止支持日期) | 标准支持截止日期（来自 endoflife.date） |
+| 10 | Extended Support Date (延长支持日期) | 延长支持截止日期 |
+| 11 | Target Engine Version (目标版本号) | 建议升级到的具体版本 |
+| 12 | Upgrade Type (更新类型) | Major（大版本）/ Minor（小版本） |
 
 ## EOS 数据来源
 

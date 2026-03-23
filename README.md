@@ -174,15 +174,16 @@ python -m eos_skill.main \
 |---|-------|-------------|
 | 1 | Account | AWS account ID |
 | 2 | Region | AWS region |
-| 3 | Cluster/Instance Name | Resource identifier |
-| 4 | Engine | MySQL, PostgreSQL, Redis, etc. |
-| 5 | Resource Type | RDS, Aurora, ElastiCache, EKS, DocumentDB, Neptune, OpenSearch, MSK, Lambda, Amazon MQ |
-| 6 | Instance Type | e.g., db.t3.medium |
-| 7 | Engine Version | Current version |
-| 8 | End of Support Date | Standard support end date (from endoflife.date) |
-| 9 | Extended Support Date | Extended support end date |
-| 10 | Target Engine Version | Recommended upgrade version |
-| 11 | Upgrade Type | Major / Minor |
+| 3 | Cluster Name | Cluster/domain/replication group name |
+| 4 | Instance Name | Member instance(s) or standalone resource name |
+| 5 | Engine | MySQL, PostgreSQL, Redis, etc. |
+| 6 | Resource Type | RDS, Aurora, ElastiCache, EKS, DocumentDB, Neptune, OpenSearch, MSK, Lambda, Amazon MQ |
+| 7 | Instance Type | e.g., db.t3.medium |
+| 8 | Engine Version | Current version |
+| 9 | End of Support Date | Standard support end date (from endoflife.date) |
+| 10 | Extended Support Date | Extended support end date |
+| 11 | Target Engine Version | Recommended upgrade version |
+| 12 | Upgrade Type | Major / Minor |
 
 ## EOS Data Sources
 

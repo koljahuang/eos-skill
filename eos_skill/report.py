@@ -1,6 +1,6 @@
 """
 Excel report generator for EOS scan results.
-Produces a formatted .xlsx file with the 11-column schema.
+Produces a formatted .xlsx file with the 12-column schema.
 """
 
 from datetime import date, datetime
@@ -15,7 +15,8 @@ COLUMNS = [
     ("#", "序号", None, 6),
     ("Account", "账号", "account", 16),
     ("Region", "区域", "region", 16),
-    ("Cluster/Instance Name", "集群/实例名称", "name", 30),
+    ("Cluster Name", "集群名称", "cluster_name", 30),
+    ("Instance Name", "实例名称", "instance_name", 30),
     ("Engine", "引擎", "engine", 14),
     ("Resource Type", "资源类型", "resource_type", 14),
     ("Instance Type", "实例类型", "instance_type", 20),

@@ -57,9 +57,9 @@ def _get_eol_cycle(engine: str, version: str) -> str:
     return major
 
 
-def _build_row(account, region, name, engine, resource_type, instance_type,
-               engine_version, lifecycle, eol_engine=None, eol_cycle=None,
-               latest_version=None) -> dict:
+def _build_row(account, region, cluster_name, instance_name, engine, resource_type,
+               instance_type, engine_version, lifecycle, eol_engine=None,
+               eol_cycle=None, latest_version=None) -> dict:
     """Build a result row dict with dynamic latest version check and EOL data."""
     target = latest_version or (lifecycle.target_version if lifecycle else None)
 
@@ -92,7 +92,8 @@ def _build_row(account, region, name, engine, resource_type, instance_type,
     return {
         "account": account,
         "region": region,
-        "name": name,
+        "cluster_name": cluster_name or "",
+        "instance_name": instance_name or "",
         "engine": engine,
         "resource_type": resource_type,
         "instance_type": instance_type,
@@ -164,21 +165,10 @@ def scan_rds(session, account: str, region: str, version_cache: LatestVersionCac
     rds = session.client("rds")
     results = []
 
-    # --- DB Instances ---
-    paginator = rds.get_paginator("describe_db_instances")
-    for page in paginator.paginate():
-        for db in page["DBInstances"]:
-            engine = db["Engine"]
-            version = db["EngineVersion"]
-            lifecycle = lookup_lifecycle(engine, version)
-            latest = version_cache.get_latest_rds_version(engine) if version_cache else None
-            eol_cycle = _get_eol_cycle(engine, version)
-            results.append(_build_row(account, region, db["DBInstanceIdentifier"],
-                ENGINE_DISPLAY_NAMES.get(engine, engine), "RDS", db["DBInstanceClass"],
-                version, lifecycle, eol_engine=engine, eol_cycle=eol_cycle,
-                latest_version=latest))
+    # Collect Aurora instance IDs so we can skip them in DB Instances
+    aurora_instance_ids = set()
 
-    # --- Aurora Clusters ---
+    # --- Aurora Clusters (scan first to collect member IDs) ---
     paginator = rds.get_paginator("describe_db_clusters")
     for page in paginator.paginate():
         for cluster in page["DBClusters"]:
@@ -188,14 +178,43 @@ def scan_rds(session, account: str, region: str, version_cache: LatestVersionCac
             lifecycle = lookup_lifecycle(lookup_engine, version)
             latest = version_cache.get_latest_aurora_version(engine) if version_cache else None
 
-            # For Aurora PostgreSQL, use the aurora-specific endpoint
             eol_engine_key = "aurora-postgresql" if "postgresql" in engine else lookup_engine
             eol_cycle = _extract_major(version, lookup_engine)
 
+            # Collect member instances
+            members = cluster.get("DBClusterMembers", [])
+            member_ids = [m["DBInstanceIdentifier"] for m in members]
+            aurora_instance_ids.update(member_ids)
+            instance_names = ", ".join(member_ids) if member_ids else ""
+
             instance_type = cluster.get("DBClusterInstanceClass", "Serverless" if "serverless" in engine else "N/A")
-            results.append(_build_row(account, region, cluster["DBClusterIdentifier"],
-                ENGINE_DISPLAY_NAMES.get(lookup_engine, engine), "Aurora", instance_type,
-                version, lifecycle, eol_engine=eol_engine_key, eol_cycle=eol_cycle,
+            results.append(_build_row(account, region,
+                cluster_name=cluster["DBClusterIdentifier"],
+                instance_name=instance_names,
+                engine=ENGINE_DISPLAY_NAMES.get(lookup_engine, engine),
+                resource_type="Aurora", instance_type=instance_type,
+                engine_version=version, lifecycle=lifecycle,
+                eol_engine=eol_engine_key, eol_cycle=eol_cycle,
+                latest_version=latest))
+
+    # --- DB Instances (standalone RDS only, skip Aurora members) ---
+    paginator = rds.get_paginator("describe_db_instances")
+    for page in paginator.paginate():
+        for db in page["DBInstances"]:
+            if db["DBInstanceIdentifier"] in aurora_instance_ids:
+                continue
+            engine = db["Engine"]
+            version = db["EngineVersion"]
+            lifecycle = lookup_lifecycle(engine, version)
+            latest = version_cache.get_latest_rds_version(engine) if version_cache else None
+            eol_cycle = _get_eol_cycle(engine, version)
+            results.append(_build_row(account, region,
+                cluster_name="",
+                instance_name=db["DBInstanceIdentifier"],
+                engine=ENGINE_DISPLAY_NAMES.get(engine, engine),
+                resource_type="RDS", instance_type=db["DBInstanceClass"],
+                engine_version=version, lifecycle=lifecycle,
+                eol_engine=engine, eol_cycle=eol_cycle,
                 latest_version=latest))
 
     return results
@@ -228,11 +247,22 @@ def scan_elasticache(session, account: str, region: str, version_cache: LatestVe
                             pass
                         break
 
+            # Collect member cache cluster IDs
+            member_ids = []
+            if rg.get("NodeGroups"):
+                for ng in rg["NodeGroups"]:
+                    for m in ng.get("NodeGroupMembers", []):
+                        member_ids.append(m["CacheClusterId"])
+
             lifecycle = lookup_lifecycle("redis", engine_version)
             latest = version_cache.get_latest_elasticache_version("redis") if version_cache else None
             eol_cycle = _get_eol_cycle("redis", engine_version)
-            results.append(_build_row(account, region, rg["ReplicationGroupId"],
-                "Redis", "ElastiCache", cache_node_type, engine_version, lifecycle,
+            results.append(_build_row(account, region,
+                cluster_name=rg["ReplicationGroupId"],
+                instance_name=", ".join(member_ids) if member_ids else "",
+                engine="Redis", resource_type="ElastiCache",
+                instance_type=cache_node_type,
+                engine_version=engine_version, lifecycle=lifecycle,
                 eol_engine="redis", eol_cycle=eol_cycle, latest_version=latest))
 
     # --- Standalone Memcached Clusters ---
@@ -244,8 +274,11 @@ def scan_elasticache(session, account: str, region: str, version_cache: LatestVe
             version = cc.get("EngineVersion", "N/A")
             lifecycle = lookup_lifecycle("memcached", version)
             latest = version_cache.get_latest_elasticache_version("memcached") if version_cache else None
-            results.append(_build_row(account, region, cc["CacheClusterId"],
-                "Memcached", "ElastiCache", cc.get("CacheNodeType", "N/A"), version, lifecycle,
+            results.append(_build_row(account, region,
+                cluster_name="", instance_name=cc["CacheClusterId"],
+                engine="Memcached", resource_type="ElastiCache",
+                instance_type=cc.get("CacheNodeType", "N/A"),
+                engine_version=version, lifecycle=lifecycle,
                 latest_version=latest))
 
     return results
@@ -280,8 +313,11 @@ def scan_eks(session, account: str, region: str, version_cache: LatestVersionCac
             it_str = ", ".join(sorted(instance_types)) if instance_types else "N/A"
             latest = version_cache.get_latest_eks_version() if version_cache else None
             eol_cycle = _get_eol_cycle("kubernetes", version)
-            results.append(_build_row(account, region, cluster_name,
-                "Kubernetes", "EKS", it_str, version, lifecycle,
+            results.append(_build_row(account, region,
+                cluster_name=cluster_name, instance_name="",
+                engine="Kubernetes", resource_type="EKS",
+                instance_type=it_str,
+                engine_version=version, lifecycle=lifecycle,
                 eol_engine="kubernetes", eol_cycle=eol_cycle, latest_version=latest))
 
     return results
@@ -300,17 +336,22 @@ def scan_documentdb(session, account: str, region: str, version_cache: LatestVer
             lifecycle = lookup_lifecycle("docdb", version)
 
             instance_type = "N/A"
-            if cluster.get("DBClusterMembers"):
+            members = cluster.get("DBClusterMembers", [])
+            member_ids = [m["DBInstanceIdentifier"] for m in members]
+            if members:
                 try:
-                    member_id = cluster["DBClusterMembers"][0]["DBInstanceIdentifier"]
-                    inst = docdb.describe_db_instances(DBInstanceIdentifier=member_id)
+                    inst = docdb.describe_db_instances(DBInstanceIdentifier=member_ids[0])
                     instance_type = inst["DBInstances"][0].get("DBInstanceClass", "N/A")
                 except Exception:
                     pass
 
             eol_cycle = _get_eol_cycle("docdb", version)
-            results.append(_build_row(account, region, cluster["DBClusterIdentifier"],
-                "DocumentDB", "DocumentDB", instance_type, version, lifecycle,
+            results.append(_build_row(account, region,
+                cluster_name=cluster["DBClusterIdentifier"],
+                instance_name=", ".join(member_ids) if member_ids else "",
+                engine="DocumentDB", resource_type="DocumentDB",
+                instance_type=instance_type,
+                engine_version=version, lifecycle=lifecycle,
                 eol_engine="docdb", eol_cycle=eol_cycle, latest_version=latest))
 
     return results
@@ -331,18 +372,23 @@ def scan_neptune(session, account: str, region: str, version_cache: LatestVersio
             lifecycle = lookup_lifecycle("neptune", version)
 
             instance_type = "N/A"
-            if cluster.get("DBClusterMembers"):
+            members = cluster.get("DBClusterMembers", [])
+            member_ids = [m["DBInstanceIdentifier"] for m in members]
+            if members:
                 try:
-                    member_id = cluster["DBClusterMembers"][0]["DBInstanceIdentifier"]
-                    inst = client.describe_db_instances(DBInstanceIdentifier=member_id)
+                    inst = client.describe_db_instances(DBInstanceIdentifier=member_ids[0])
                     instance_type = inst["DBInstances"][0].get("DBInstanceClass", "N/A")
                 except Exception:
                     pass
 
             # Neptune endoflife.date uses full version as cycle
             eol_cycle = version
-            results.append(_build_row(account, region, cluster["DBClusterIdentifier"],
-                "Neptune", "Neptune", instance_type, version, lifecycle,
+            results.append(_build_row(account, region,
+                cluster_name=cluster["DBClusterIdentifier"],
+                instance_name=", ".join(member_ids) if member_ids else "",
+                engine="Neptune", resource_type="Neptune",
+                instance_type=instance_type,
+                engine_version=version, lifecycle=lifecycle,
                 eol_engine="neptune", eol_cycle=eol_cycle, latest_version=latest))
 
     return results
@@ -370,8 +416,11 @@ def scan_opensearch(session, account: str, region: str, version_cache: LatestVer
         engine_name = "OpenSearch" if "OpenSearch" in engine_version else "Elasticsearch"
         latest = version_cache.get_latest_opensearch_version() if version_cache else None
         eol_cycle = _get_eol_cycle("opensearch", engine_version)
-        results.append(_build_row(account, region, domain["DomainName"],
-            engine_name, "OpenSearch", instance_type, engine_version, lifecycle,
+        results.append(_build_row(account, region,
+            cluster_name=domain["DomainName"], instance_name="",
+            engine=engine_name, resource_type="OpenSearch",
+            instance_type=instance_type,
+            engine_version=engine_version, lifecycle=lifecycle,
             eol_engine="opensearch", eol_cycle=eol_cycle, latest_version=latest))
 
     return results
@@ -400,8 +449,11 @@ def scan_msk(session, account: str, region: str, version_cache: LatestVersionCac
 
             lifecycle = lookup_lifecycle("kafka", version)
             eol_cycle = _get_eol_cycle("kafka", version)
-            results.append(_build_row(account, region, cluster_name,
-                "Kafka", "MSK", instance_type, version, lifecycle,
+            results.append(_build_row(account, region,
+                cluster_name=cluster_name, instance_name="",
+                engine="Kafka", resource_type="MSK",
+                instance_type=instance_type,
+                engine_version=version, lifecycle=lifecycle,
                 eol_engine="kafka", eol_cycle=eol_cycle, latest_version=latest))
 
     return results
@@ -425,8 +477,11 @@ def scan_lambda(session, account: str, region: str, version_cache: LatestVersion
 
             it_str = f'{func.get("MemorySize", "N/A")}MB / {func.get("Architectures", ["N/A"])[0]}'
             eol_cycle = _get_eol_cycle("lambda", runtime)
-            results.append(_build_row(account, region, func["FunctionName"],
-                "Lambda", "Lambda", it_str, runtime, lifecycle,
+            results.append(_build_row(account, region,
+                cluster_name="", instance_name=func["FunctionName"],
+                engine="Lambda", resource_type="Lambda",
+                instance_type=it_str,
+                engine_version=runtime, lifecycle=lifecycle,
                 eol_engine="lambda", eol_cycle=eol_cycle))
 
     return results
@@ -450,9 +505,12 @@ def scan_amazonmq(session, account: str, region: str, version_cache: LatestVersi
             latest = version_cache.get_latest_amazonmq_version(engine) if version_cache else None
             eol_cycle = _get_eol_cycle(lookup_engine, version)
 
-            results.append(_build_row(account, region, broker.get("BrokerName", broker_id),
-                ENGINE_DISPLAY_NAMES.get(lookup_engine, engine), "Amazon MQ",
-                broker.get("HostInstanceType", "N/A"), version, lifecycle,
+            results.append(_build_row(account, region,
+                cluster_name="", instance_name=broker.get("BrokerName", broker_id),
+                engine=ENGINE_DISPLAY_NAMES.get(lookup_engine, engine),
+                resource_type="Amazon MQ",
+                instance_type=broker.get("HostInstanceType", "N/A"),
+                engine_version=version, lifecycle=lifecycle,
                 eol_engine=lookup_engine, eol_cycle=eol_cycle, latest_version=latest))
 
     return results
