@@ -178,11 +178,10 @@ python -m eos_skill.main \
 | 5 | Resource Type | RDS, Aurora, ElastiCache, EKS, DocumentDB, OpenSearch, MSK, Lambda, Amazon MQ |
 | 6 | Instance Type | e.g., db.t3.medium |
 | 7 | Engine Version | Current version |
-| 8 | End of Support Date | EOS deadline |
-| 9 | Target Engine Version | Recommended upgrade version |
-| 10 | Upgrade Type | Major / Minor |
-| 11 | Recommend Upgrade Instance Type | Suggested instance spec |
-| 12 | Recommend Reason | Why upgrade is needed |
+| 8 | Target Engine Version | Recommended upgrade version |
+| 9 | Upgrade Type | Major / Minor |
+| 10 | Recommend Upgrade Instance Type | Suggested instance spec |
+| 11 | Recommend Reason | Why upgrade is needed |
 
 ## Updating EOS Data
 

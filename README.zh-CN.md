@@ -178,11 +178,10 @@ python -m eos_skill.main \
 | 5 | Resource Type (资源类型) | RDS、Aurora、ElastiCache、EKS、DocumentDB、OpenSearch、MSK、Lambda、Amazon MQ |
 | 6 | Instance Type (实例类型) | 当前规格（如 db.t3.medium） |
 | 7 | Engine Version (引擎版本) | 当前运行的版本号 |
-| 8 | End of Support Date (停止支持日期) | 官方停止维护的最后期限 |
-| 9 | Target Engine Version (目标版本号) | 建议升级到的具体版本 |
-| 10 | Upgrade Type (更新类型) | Major（大版本）/ Minor（小版本） |
-| 11 | Recommend Upgrade Instance Type (建议升级实例类型) | 适配新版本的建议规格 |
-| 12 | Recommend Reason (建议理由) | 升级的必要性说明 |
+| 8 | Target Engine Version (目标版本号) | 建议升级到的具体版本 |
+| 9 | Upgrade Type (更新类型) | Major（大版本）/ Minor（小版本） |
+| 10 | Recommend Upgrade Instance Type (建议升级实例类型) | 适配新版本的建议规格 |
+| 11 | Recommend Reason (建议理由) | 升级的必要性说明 |
 
 ## 更新 EOS 数据
 

@@ -50,18 +50,10 @@ pip install boto3 openpyxl
 
 ### Step 3: Execute Scan
 
-**IMPORTANT**: The `eos_skill` Python package lives inside this skill's directory. Before running, locate the skill directory and set PYTHONPATH.
+**IMPORTANT**: Run all commands from the user's current project directory. Do NOT cd into .agents or .kiro directories. Set PYTHONPATH using `$HOME` absolute path so the sandbox does not block access.
 
-First, find the skill directory:
 ```bash
-SKILL_DIR=$(find ~/.agents/skills ~/.kiro/skills ~/.claude/skills -maxdepth 1 -name "eos-skill" -type d 2>/dev/null | head -1)
-# If not found, try the symlink target
-[ -z "$SKILL_DIR" ] && SKILL_DIR=$(readlink -f ~/.kiro/skills/eos-skill 2>/dev/null || echo "")
-```
-
-Then run the scan:
-```bash
-PYTHONPATH="$SKILL_DIR" python -m eos_skill.main \
+PYTHONPATH="$HOME/.agents/skills/eos-skill" python -m eos_skill.main \
   --profile <PROFILE_NAME> \
   --accounts <ACCOUNT_IDS> \
   --regions <REGIONS> \
@@ -77,7 +69,7 @@ The scan will:
 
 ### Step 4: Generate Report
 
-The Excel report contains these 12 columns:
+The Excel report contains these 11 columns:
 
 | # | Field (EN) | Field (CN) | Description |
 |---|-----------|-----------|-------------|
@@ -88,11 +80,10 @@ The Excel report contains these 12 columns:
 | 5 | Resource Type | 资源类型 | RDS, Aurora, ElastiCache, EKS, DocumentDB, OpenSearch, MSK, Lambda, Amazon MQ |
 | 6 | Instance Type | 实例类型 | Current spec (e.g., db.t3.medium) |
 | 7 | Engine Version | 引擎版本 | Current running version |
-| 8 | End of Support Date | 停止支持日期 | Official EOS deadline |
-| 9 | Target Engine Version | 目标版本号 | Recommended upgrade version |
-| 10 | Upgrade Type | 更新类型 | Major or Minor |
-| 11 | Recommend Upgrade Instance Type | 建议升级实例类型 | Suggested instance spec |
-| 12 | Recommend Reason | 建议理由 | Why upgrade is needed |
+| 8 | Target Engine Version | 目标版本号 | Recommended upgrade version |
+| 9 | Upgrade Type | 更新类型 | Major or Minor |
+| 10 | Recommend Upgrade Instance Type | 建议升级实例类型 | Suggested instance spec |
+| 11 | Recommend Reason | 建议理由 | Why upgrade is needed |
 
 Report features:
 - **Color coding**: Red = expired, Yellow = expiring within 6 months, Green = safe

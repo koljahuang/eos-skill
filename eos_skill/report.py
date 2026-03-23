@@ -1,9 +1,10 @@
 """
 Excel report generator for EOS scan results.
-Produces a formatted .xlsx file with the 12-column schema.
+Produces a formatted .xlsx file with the 11-column schema.
 """
 
 from datetime import date, datetime
+
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
@@ -19,7 +20,6 @@ COLUMNS = [
     ("Resource Type", "资源类型", "resource_type", 14),
     ("Instance Type", "实例类型", "instance_type", 20),
     ("Engine Version", "引擎版本", "engine_version", 16),
-    ("End of Support Date", "停止支持日期", "eos_date", 20),
     ("Target Engine Version", "目标版本号", "target_version", 20),
     ("Upgrade Type", "更新类型", "upgrade_type", 16),
     ("Recommend Upgrade Instance Type", "建议升级实例类型", "recommend_instance_type", 28),
