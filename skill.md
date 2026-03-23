@@ -50,26 +50,22 @@ pip install boto3 openpyxl
 
 ### Step 3: Execute Scan
 
-**IMPORTANT**: The `eos_skill` Python package lives inside this skill's directory. You MUST set `PYTHONPATH` to this skill's directory or `cd` into it before running the command.
+**IMPORTANT**: The `eos_skill` Python package lives inside this skill's directory. Before running, locate the skill directory and set PYTHONPATH.
 
+First, find the skill directory:
 ```bash
-# Set PYTHONPATH to the skill directory (adjust path based on where the skill is installed)
-# For Kiro: .kiro/skills/eos-skill
-# For Claude Code: .claude/skills/eos-skill
-# Then run:
+SKILL_DIR=$(find ~/.agents/skills ~/.kiro/skills ~/.claude/skills -maxdepth 1 -name "eos-skill" -type d 2>/dev/null | head -1)
+# If not found, try the symlink target
+[ -z "$SKILL_DIR" ] && SKILL_DIR=$(readlink -f ~/.kiro/skills/eos-skill 2>/dev/null || echo "")
+```
 
-PYTHONPATH=<SKILL_DIR> python -m eos_skill.main \
+Then run the scan:
+```bash
+PYTHONPATH="$SKILL_DIR" python -m eos_skill.main \
   --profile <PROFILE_NAME> \
   --accounts <ACCOUNT_IDS> \
   --regions <REGIONS> \
   --resource-types <TYPES> \
-  --output <OUTPUT_PATH>
-
-# Or cd into the skill directory first:
-cd <SKILL_DIR> && python -m eos_skill.main \
-  --profile <PROFILE_NAME> \
-  --accounts <ACCOUNT_IDS> \
-  --regions <REGIONS> \
   --output <OUTPUT_PATH>
 ```
 
