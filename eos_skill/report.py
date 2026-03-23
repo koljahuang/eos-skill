@@ -20,10 +20,10 @@ COLUMNS = [
     ("Resource Type", "资源类型", "resource_type", 14),
     ("Instance Type", "实例类型", "instance_type", 20),
     ("Engine Version", "引擎版本", "engine_version", 16),
+    ("End of Support Date", "停止支持日期", "eol_date", 20),
+    ("Extended Support Date", "延长支持日期", "extended_support", 20),
     ("Target Engine Version", "目标版本号", "target_version", 20),
     ("Upgrade Type", "更新类型", "upgrade_type", 16),
-    ("Recommend Upgrade Instance Type", "建议升级实例类型", "recommend_instance_type", 28),
-    ("Recommend Reason", "建议理由", "recommend_reason", 50),
 ]
 
 # Styles
@@ -47,16 +47,16 @@ WARNING_FILL = PatternFill(start_color="FFEB9C", end_color="FFEB9C", fill_type="
 OK_FILL = PatternFill(start_color="C6EFCE", end_color="C6EFCE", fill_type="solid")       # Green
 
 
-def _get_row_fill(eos_date) -> PatternFill | None:
+def _get_row_fill(eol_date) -> PatternFill | None:
     """Determine row color based on EOS proximity."""
-    if eos_date is None:
+    if eol_date is None:
         return None
     today = date.today()
-    if isinstance(eos_date, datetime):
-        eos_date = eos_date.date()
-    if eos_date <= today:
+    if isinstance(eol_date, datetime):
+        eol_date = eol_date.date()
+    if eol_date <= today:
         return EXPIRED_FILL  # Already expired
-    days_remaining = (eos_date - today).days
+    days_remaining = (eol_date - today).days
     if days_remaining <= 180:
         return WARNING_FILL  # Expiring within 6 months
     return OK_FILL
@@ -96,7 +96,7 @@ def generate_report(rows: list[dict], output_path: str) -> str:
 
     # Write data rows
     for row_idx, row_data in enumerate(rows, start=3):
-        row_fill = _get_row_fill(row_data.get("eos_date"))
+        row_fill = _get_row_fill(row_data.get("eol_date"))
 
         for col_idx, (_, _, field_key, _) in enumerate(COLUMNS, start=1):
             if field_key is None:

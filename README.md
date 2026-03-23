@@ -178,11 +178,11 @@ python -m eos_skill.main \
 | 5 | Resource Type | RDS, Aurora, ElastiCache, EKS, DocumentDB, OpenSearch, MSK, Lambda, Amazon MQ |
 | 6 | Instance Type | e.g., db.t3.medium |
 | 7 | Engine Version | Current version |
-| 8 | Target Engine Version | Recommended upgrade version |
-| 9 | Upgrade Type | Major / Minor |
-| 10 | Recommend Upgrade Instance Type | Suggested instance spec |
-| 11 | Recommend Reason | Why upgrade is needed |
+| 8 | End of Support Date | Standard support end date (from endoflife.date) |
+| 9 | Extended Support Date | Extended support end date |
+| 10 | Target Engine Version | Recommended upgrade version |
+| 11 | Upgrade Type | Major / Minor |
 
-## Updating EOS Data
+## EOS Data Sources
 
-EOS lifecycle data is maintained in `eos_skill/eos_data.py`. Update this file when AWS announces new EOS dates.
+EOS dates and Extended Support dates are fetched dynamically from the [endoflife.date](https://endoflife.date) API. Target upgrade versions are maintained in `eos_skill/eos_data.py`. Update this file when new engine versions are released.

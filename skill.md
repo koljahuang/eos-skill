@@ -80,10 +80,10 @@ The Excel report contains these 11 columns:
 | 5 | Resource Type | 资源类型 | RDS, Aurora, ElastiCache, EKS, DocumentDB, OpenSearch, MSK, Lambda, Amazon MQ |
 | 6 | Instance Type | 实例类型 | Current spec (e.g., db.t3.medium) |
 | 7 | Engine Version | 引擎版本 | Current running version |
-| 8 | Target Engine Version | 目标版本号 | Recommended upgrade version |
-| 9 | Upgrade Type | 更新类型 | Major or Minor |
-| 10 | Recommend Upgrade Instance Type | 建议升级实例类型 | Suggested instance spec |
-| 11 | Recommend Reason | 建议理由 | Why upgrade is needed |
+| 8 | End of Support Date | 停止支持日期 | Standard support end date (from endoflife.date) |
+| 9 | Extended Support Date | 延长支持日期 | Extended support end date |
+| 10 | Target Engine Version | 目标版本号 | Recommended upgrade version |
+| 11 | Upgrade Type | 更新类型 | Major or Minor |
 
 Report features:
 - **Color coding**: Red = expired, Yellow = expiring within 6 months, Green = safe
@@ -100,7 +100,7 @@ After generating the report:
 
 ## EOS Data Sources
 
-The EOS lifecycle data is maintained in `eos_skill/eos_data.py`. It includes known EOS dates for:
+EOS dates and Extended Support dates are fetched dynamically from the [endoflife.date](https://endoflife.date) API. Target upgrade versions are maintained in `eos_skill/eos_data.py`. Supported engines:
 - **RDS MySQL**: 5.7, 8.0, 8.4
 - **RDS PostgreSQL**: 11, 12, 13, 14, 15, 16
 - **RDS MariaDB**: 10.4, 10.5, 10.6, 10.11
@@ -114,8 +114,8 @@ The EOS lifecycle data is maintained in `eos_skill/eos_data.py`. It includes kno
 - **Amazon MQ ActiveMQ**: 5.15, 5.16, 5.17
 - **Amazon MQ RabbitMQ**: 3.10, 3.11, 3.12, 3.13
 
-> **Note**: EOS dates are approximate. Always verify against the latest AWS documentation.
-> Update `eos_data.py` when AWS announces new EOS dates.
+> **Note**: EOS dates are fetched from endoflife.date API in real-time.
+> Update `eos_data.py` when new engine versions are released to add target upgrade mappings.
 
 ## Error Handling
 
