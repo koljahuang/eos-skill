@@ -59,6 +59,12 @@ def main():
         help="IAM role name for cross-account access (default: OrganizationAccountAccessRole)",
     )
     parser.add_argument(
+        "--role-arns",
+        nargs="+",
+        default=None,
+        help="Per-account full role ARN mappings, format: ACCOUNT_ID=arn:aws:iam::ACCOUNT_ID:role/RoleName. Overrides --role-name for matched accounts.",
+    )
+    parser.add_argument(
         "--output",
         default=None,
         help="Output Excel file path (default: eos_report_<timestamp>.xlsx)",
@@ -76,6 +82,14 @@ def main():
         ts = datetime.now().strftime("%Y%m%d_%H%M%S")
         args.output = f"eos_report_{ts}.xlsx"
 
+    # Parse per-account role ARN mappings: ACCOUNT=arn:aws:iam::xxx:role/Xxx
+    role_arn_map = {}
+    if args.role_arns:
+        for mapping in args.role_arns:
+            if "=" in mapping:
+                acct, arn = mapping.split("=", 1)
+                role_arn_map[acct.strip()] = arn.strip()
+
     auth_method = "AK/SK" if args.access_key else (f"profile:{args.profile}" if args.profile else "default credentials")
     print(f"EOS Scanner")
     print(f"  Auth:           {auth_method}")
@@ -83,6 +97,8 @@ def main():
     print(f"  Regions:        {args.regions}")
     print(f"  Resource Types: {args.resource_types}")
     print(f"  Role Name:      {args.role_name}")
+    if role_arn_map:
+        print(f"  Role ARN Map:   {role_arn_map}")
     print(f"  Output:         {args.output}")
     print()
 
@@ -91,6 +107,7 @@ def main():
         regions=args.regions,
         resource_types=args.resource_types,
         role_name=args.role_name,
+        role_arn_map=role_arn_map,
         profile=args.profile,
         access_key=args.access_key,
         secret_key=args.secret_key,

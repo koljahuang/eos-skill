@@ -162,12 +162,17 @@ def _get_session(
     account: str,
     region: str,
     role_name: str = "OrganizationAccountAccessRole",
+    role_arn: Optional[str] = None,
     base_session: boto3.Session | None = None,
 ):
     """
     Get a boto3 session for the target account/region.
     If account matches the current caller identity, return a direct session.
     Otherwise, assume a cross-account role.
+
+    Args:
+        role_arn: Full role ARN to assume (takes priority over role_name).
+        role_name: Role name to construct ARN from account ID (fallback).
     """
     if base_session is None:
         base_session = boto3.Session()
@@ -183,8 +188,9 @@ def _get_session(
             region_name=region,
         ) if base_session.get_credentials() else boto3.Session(region_name=region)
 
-    role_arn = f"arn:aws:iam::{account}:role/{role_name}"
-    resp = sts.assume_role(RoleArn=role_arn, RoleSessionName="eos-scan")
+    # Use explicit role_arn if provided, otherwise construct from role_name
+    actual_arn = role_arn or f"arn:aws:iam::{account}:role/{role_name}"
+    resp = sts.assume_role(RoleArn=actual_arn, RoleSessionName="eos-scan")
     creds = resp["Credentials"]
     return boto3.Session(
         aws_access_key_id=creds["AccessKeyId"],
@@ -578,6 +584,7 @@ def run_scan(
     regions: list[str],
     resource_types: list[str],
     role_name: str = "OrganizationAccountAccessRole",
+    role_arn_map: dict[str, str] | None = None,
     profile: str | None = None,
     access_key: str | None = None,
     secret_key: str | None = None,
@@ -585,14 +592,20 @@ def run_scan(
     """
     Run EOS scan across accounts, regions, and resource types.
     Returns a list of row dicts ready for report generation.
+
+    Args:
+        role_arn_map: Optional dict mapping account_id -> full role ARN.
+                      Overrides role_name for matched accounts.
     """
     base_session = _get_base_session(profile, access_key, secret_key)
     all_results = []
     for account in accounts:
         for region in regions:
             print(f"Scanning account={account} region={region} ...")
+            # Look up per-account role ARN, fall back to role_name
+            account_role_arn = (role_arn_map or {}).get(account)
             try:
-                session = _get_session(account, region, role_name, base_session)
+                session = _get_session(account, region, role_name, account_role_arn, base_session)
             except Exception as e:
                 print(f"  Failed to get session: {e}")
                 continue
