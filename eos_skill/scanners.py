@@ -621,32 +621,40 @@ def run_scan(
         role_arn_map: Optional dict mapping account_id -> full role ARN.
                       Overrides role_name for matched accounts.
     """
+    import sys
     base_session = _get_base_session(profile, access_key, secret_key)
     all_results = []
+    errors = []
     for account in accounts:
         for region in regions:
-            print(f"Scanning account={account} region={region} ...")
+            print(f"Scanning account={account} region={region} ...", file=sys.stderr)
             # Look up per-account role ARN, fall back to role_name
             account_role_arn = (role_arn_map or {}).get(account)
             try:
                 session = _get_session(account, region, role_name, account_role_arn, base_session)
             except Exception as e:
-                print(f"  Failed to get session: {e}")
+                print(f"  Failed to get session: {e}", file=sys.stderr)
+                errors.append(f"{account}/{region}: session failed - {e}")
                 continue
 
             version_cache = LatestVersionCache(session)
-            print(f"  Fetching latest available versions ...")
 
             for rt in resource_types:
                 scanner = SCANNERS.get(rt.lower())
                 if not scanner:
-                    print(f"  Unknown resource type: {rt}")
                     continue
                 try:
                     rows = scanner(session, account, region, version_cache=version_cache)
-                    print(f"  {rt}: found {len(rows)} resources")
+                    if rows:
+                        print(f"  {rt}: {len(rows)} resources", file=sys.stderr)
                     all_results.extend(rows)
                 except Exception as e:
-                    print(f"  {rt}: error - {e}")
+                    print(f"  {rt}: error - {e}", file=sys.stderr)
+                    errors.append(f"{account}/{region}/{rt}: {e}")
+
+    # Print compact summary to stdout (this is what Claude sees in context)
+    print(f"Scan complete: {len(all_results)} resources found across {len(regions)} regions")
+    if errors:
+        print(f"Errors ({len(errors)}): {'; '.join(errors[:5])}")
 
     return all_results

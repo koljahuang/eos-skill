@@ -97,16 +97,8 @@ def cmd_scan(args):
         args.output = f"eos_report_{ts}.xlsx"
 
     auth_method = "AK/SK" if args.access_key else (f"profile:{args.profile}" if args.profile else "default credentials")
-    print(f"EOS Scanner")
-    print(f"  Auth:           {auth_method}")
-    print(f"  Accounts:       {args.accounts}")
-    print(f"  Regions:        {args.regions}")
-    print(f"  Resource Types: {args.resource_types}")
-    print(f"  Role Name:      {args.role_name}")
-    if role_arn_map:
-        print(f"  Role ARN Map:   {role_arn_map}")
-    print(f"  Output:         {args.output}")
-    print()
+    print(f"EOS Scanner: {len(args.accounts)} accounts, {len(args.regions)} regions, {len(args.resource_types)} types", file=sys.stderr)
+    print(f"  Auth: {auth_method}, Output: {args.output}", file=sys.stderr)
 
     rows = run_scan(
         accounts=args.accounts,
