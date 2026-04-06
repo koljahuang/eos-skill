@@ -57,8 +57,12 @@ Then proceed to Step 1 for region selection.
 
 **ALWAYS run this step** regardless of platform mode. Use `list-regions` to discover available regions for each account, then present them to the user for selection.
 
+**Resolve SKILL_PATH**: The skill code lives where this SKILL.md file is located. Use the directory containing this file as PYTHONPATH:
+- **OpenOps mode**: Claude CLI runs in a per-user workspace directory. Skills are symlinked at `.claude/skills/<skill-name>` relative to the working directory. Use `PYTHONPATH=".claude/skills/eos-skill"`.
+- **Standalone mode**: Use the absolute path to the skill directory, e.g. `PYTHONPATH="$HOME/.agents/skills/eos-skill"` or wherever the skill is installed.
+
 ```bash
-PYTHONPATH="<SKILL_PATH>" python -m eos_skill.main list-regions \
+PYTHONPATH=".claude/skills/eos-skill" python3 -m eos_skill.main list-regions \
   --accounts <ACCOUNT_IDS> \
   [--profile <PROFILE>]
 ```
@@ -89,10 +93,10 @@ pip install boto3 openpyxl
 
 ### Step 3: Execute Scan
 
-**IMPORTANT**: Run all commands from the user's current project directory. Do NOT cd into .agents or .kiro directories. Set PYTHONPATH using `$HOME` absolute path so the sandbox does not block access.
+**IMPORTANT**: Use the same PYTHONPATH resolved in Step 1.
 
 ```bash
-PYTHONPATH="<SKILL_PATH>" python -m eos_skill.main scan \
+PYTHONPATH=".claude/skills/eos-skill" python3 -m eos_skill.main scan \
   --accounts <ACCOUNT_IDS> \
   --regions <SELECTED_REGIONS> \
   --resource-types <TYPES> \
@@ -103,7 +107,7 @@ PYTHONPATH="<SKILL_PATH>" python -m eos_skill.main scan \
 **OpenOps auto mode example** (no --profile, credentials already injected via env vars):
 ```bash
 mkdir -p <WORKSPACE>/$(date +%Y-%m-%d)
-PYTHONPATH="<SKILL_PATH>" python -m eos_skill.main scan \
+PYTHONPATH=".claude/skills/eos-skill" python3 -m eos_skill.main scan \
   --accounts 123456789012 \
   --regions us-east-1 ap-northeast-1 \
   --output <WORKSPACE>/$(date +%Y-%m-%d)/eos_report_$(date +%Y%m%d_%H%M%S).xlsx
