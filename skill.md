@@ -20,17 +20,12 @@ You are an AWS EOS resource scanner assistant. You help users identify AWS resou
 When inside OpenOps, most parameters are already available:
 - **Auth**: Use default credential chain — credentials are injected via environment variables. Do NOT use `--profile` or `--access-key`.
 - **Accounts**: Extract from the "Available Cloud Accounts" section in the system prompt. Parse `Account: <id>, Regions: [<regions>]` for each AWS account.
-- **Regions**: Extract available regions from the system prompt, then **ask the user which regions to scan**. Present the available regions as options and let the user choose. If the user says "all" or doesn't specify, scan all available regions.
 - **Resource types**: Scan all types (default)
 - **Output path**: Use the WORKSPACE path from system prompt, appended with a date folder: `<WORKSPACE>/<YYYY-MM-DD>/eos_report_<timestamp>.xlsx`. Create the date directory first with `mkdir -p`.
 
-**Ask the user to confirm regions before scanning**, then proceed to Step 2.
+**Region selection is REQUIRED** — proceed to Step 1.
 
-### If running standalone → **Interactive mode** (follow Step 1 below)
-
-## Workflow
-
-### Step 1: Gather Input (Interactive mode only)
+### If running standalone → **Interactive mode**
 
 Ask the user for the following information if not already provided:
 
@@ -39,8 +34,7 @@ Ask the user for the following information if not already provided:
    - **AK/SK**: `--access-key <AK> --secret-key <SK>`
    - Or use default credentials (env vars / instance role / default profile)
 2. **AWS Account ID(s)**: One or more 12-digit AWS account IDs
-3. **Region(s)**: One or more AWS regions (e.g., `us-east-1`, `ap-northeast-1`)
-4. **Resource Types** (optional): Which resource types to scan. Options:
+3. **Resource Types** (optional): Which resource types to scan (default: all). Options:
    - `rds` - RDS instances and Aurora clusters (MySQL, PostgreSQL, MariaDB)
    - `elasticache` - ElastiCache clusters (Redis, Memcached)
    - `eks` - EKS Kubernetes clusters
@@ -50,12 +44,36 @@ Ask the user for the following information if not already provided:
    - `msk` - MSK Kafka clusters
    - `lambda` - Lambda functions (runtime deprecation)
    - `amazonmq` - Amazon MQ brokers (ActiveMQ, RabbitMQ)
-   - Default: scan all types
-5. **Output file path** (required): Where to save the Excel report
-   - e.g., `~/Desktop/eos_report.xlsx`, `/tmp/reports/eos_report.xlsx`
-   - Default if not specified: `eos_report_<timestamp>.xlsx` in current directory
-6. **Cross-account Role Name** (optional): IAM role name for assuming into target accounts
+4. **Output file path** (optional): Where to save the Excel report
+   - Default: `eos_report_<timestamp>.xlsx` in current directory
+5. **Cross-account Role Name** (optional): IAM role name for assuming into target accounts
    - Default: `OrganizationAccountAccessRole`
+
+Then proceed to Step 1 for region selection.
+
+## Workflow
+
+### Step 1: Discover and Select Regions
+
+**ALWAYS run this step** regardless of platform mode. Use `list-regions` to discover available regions for each account, then present them to the user for selection.
+
+```bash
+PYTHONPATH="<SKILL_PATH>" python -m eos_skill.main list-regions \
+  --accounts <ACCOUNT_IDS> \
+  [--profile <PROFILE>]
+```
+
+The output is JSON, one line per account:
+```json
+{"account": "123456789012", "regions": ["ap-northeast-1", "ap-southeast-1", "eu-west-1", "us-east-1", "us-west-2"]}
+```
+
+After getting the regions list:
+1. **Present all discovered regions** to the user
+2. **Ask which regions to scan** — let the user select one, several, or all
+3. If the user says "all" or doesn't narrow down, use all discovered regions
+
+**Do NOT skip this step.** Even if the system prompt lists regions, always run `list-regions` to get the actual enabled regions from the AWS account.
 
 ### Step 2: Verify Prerequisites
 
@@ -74,18 +92,18 @@ pip install boto3 openpyxl
 **IMPORTANT**: Run all commands from the user's current project directory. Do NOT cd into .agents or .kiro directories. Set PYTHONPATH using `$HOME` absolute path so the sandbox does not block access.
 
 ```bash
-PYTHONPATH="$HOME/.agents/skills/eos-skill" python -m eos_skill.main \
-  --profile <PROFILE_NAME> \
+PYTHONPATH="<SKILL_PATH>" python -m eos_skill.main scan \
   --accounts <ACCOUNT_IDS> \
-  --regions <REGIONS> \
+  --regions <SELECTED_REGIONS> \
   --resource-types <TYPES> \
-  --output <OUTPUT_PATH>
+  --output <OUTPUT_PATH> \
+  [--profile <PROFILE>]
 ```
 
 **OpenOps auto mode example** (no --profile, credentials already injected via env vars):
 ```bash
 mkdir -p <WORKSPACE>/$(date +%Y-%m-%d)
-PYTHONPATH="<SKILL_PATH>" python -m eos_skill.main \
+PYTHONPATH="<SKILL_PATH>" python -m eos_skill.main scan \
   --accounts 123456789012 \
   --regions us-east-1 ap-northeast-1 \
   --output <WORKSPACE>/$(date +%Y-%m-%d)/eos_report_$(date +%Y%m%d_%H%M%S).xlsx
@@ -130,6 +148,28 @@ After generating the report:
 1. Show a summary table of findings (total resources, expired count, warning count)
 2. Highlight the most urgent items (already expired or expiring soon)
 3. Provide the output file path
+
+## CLI Reference
+
+### list-regions
+
+Discover enabled AWS regions for target accounts.
+
+```
+python -m eos_skill.main list-regions --accounts <IDS> [--profile <P>] [--access-key <AK> --secret-key <SK>]
+```
+
+Output: JSON per line — `{"account": "...", "regions": ["..."]}` on stdout, errors on stderr.
+
+### scan
+
+Run the EOS resource scan.
+
+```
+python -m eos_skill.main scan --accounts <IDS> --regions <REGIONS> [--resource-types <TYPES>] [--output <PATH>] [--profile <P>]
+```
+
+**Backward compatibility**: Running without a subcommand (e.g. `python -m eos_skill.main --accounts ... --regions ...`) still works and defaults to `scan`.
 
 ## EOS Data Sources
 

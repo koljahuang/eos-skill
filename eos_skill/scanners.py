@@ -158,6 +158,30 @@ def _get_base_session(
     return boto3.Session()
 
 
+def discover_regions(
+    account: str,
+    role_name: str = "OrganizationAccountAccessRole",
+    role_arn: str | None = None,
+    profile: str | None = None,
+    access_key: str | None = None,
+    secret_key: str | None = None,
+) -> list[str]:
+    """
+    Discover all enabled/opted-in AWS regions for a given account.
+    Returns a sorted list of region names.
+    """
+    base_session = _get_base_session(profile, access_key, secret_key)
+    # Get session for the target account (use us-east-1 for EC2 describe-regions)
+    session = _get_session(account, "us-east-1", role_name, role_arn, base_session)
+    ec2 = session.client("ec2")
+    resp = ec2.describe_regions(
+        AllRegions=False,  # Only return enabled/opted-in regions
+        Filters=[{"Name": "opt-in-status", "Values": ["opt-in-not-required", "opted-in"]}],
+    )
+    regions = sorted([r["RegionName"] for r in resp["Regions"]])
+    return regions
+
+
 def _get_session(
     account: str,
     region: str,
