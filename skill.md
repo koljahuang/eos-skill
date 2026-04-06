@@ -57,12 +57,12 @@ Then proceed to Step 1 for region selection.
 
 **ALWAYS run this step** regardless of platform mode. Use `list-regions` to discover available regions for each account, then present them to the user for selection.
 
-**Resolve SKILL_PATH**: The skill code lives where this SKILL.md file is located. Use the directory containing this file as PYTHONPATH:
-- **OpenOps mode**: Claude CLI runs in a per-user workspace directory. Skills are symlinked at `.claude/skills/<skill-name>` relative to the working directory. Use `PYTHONPATH=".claude/skills/eos-skill"`.
-- **Standalone mode**: Use the absolute path to the skill directory, e.g. `PYTHONPATH="$HOME/.agents/skills/eos-skill"` or wherever the skill is installed.
+**Script path**: Use `run.py` in the skill directory. No PYTHONPATH needed.
+- **OpenOps mode**: `.claude/skills/eos-skill/run.py`
+- **Standalone mode**: Absolute path to `run.py`, e.g. `$HOME/.agents/skills/eos-skill/run.py`
 
 ```bash
-PYTHONPATH=".claude/skills/eos-skill" python3 -m eos_skill.main list-regions \
+python3 .claude/skills/eos-skill/run.py list-regions \
   --accounts <ACCOUNT_IDS> \
   [--profile <PROFILE>]
 ```
@@ -94,10 +94,10 @@ pip install boto3 openpyxl
 
 ### Step 3: Execute Scan
 
-**IMPORTANT**: Use the same PYTHONPATH resolved in Step 1.
+**IMPORTANT**: Use the same script path as Step 1.
 
 ```bash
-PYTHONPATH=".claude/skills/eos-skill" python3 -m eos_skill.main scan \
+python3 .claude/skills/eos-skill/run.py scan \
   --accounts <ACCOUNT_IDS> \
   --regions <SELECTED_REGIONS> \
   --resource-types <TYPES> \
@@ -108,7 +108,7 @@ PYTHONPATH=".claude/skills/eos-skill" python3 -m eos_skill.main scan \
 **OpenOps auto mode example** (no --profile, credentials already injected via env vars):
 ```bash
 mkdir -p <WORKSPACE>/$(date +%Y-%m-%d)
-PYTHONPATH=".claude/skills/eos-skill" python3 -m eos_skill.main scan \
+python3 .claude/skills/eos-skill/run.py scan \
   --accounts 123456789012 \
   --regions us-east-1 ap-northeast-1 \
   --output <WORKSPACE>/$(date +%Y-%m-%d)/eos_report_$(date +%Y%m%d_%H%M%S).xlsx
@@ -161,7 +161,7 @@ After generating the report:
 Discover enabled AWS regions for target accounts.
 
 ```
-python -m eos_skill.main list-regions --accounts <IDS> [--profile <P>] [--access-key <AK> --secret-key <SK>]
+python3 run.py list-regions --accounts <IDS> [--profile <P>] [--access-key <AK> --secret-key <SK>]
 ```
 
 Output: JSON per line — `{"account": "...", "regions": ["..."]}` on stdout, errors on stderr.
@@ -171,10 +171,8 @@ Output: JSON per line — `{"account": "...", "regions": ["..."]}` on stdout, er
 Run the EOS resource scan.
 
 ```
-python -m eos_skill.main scan --accounts <IDS> --regions <REGIONS> [--resource-types <TYPES>] [--output <PATH>] [--profile <P>]
+python3 run.py scan --accounts <IDS> --regions <REGIONS> [--resource-types <TYPES>] [--output <PATH>] [--profile <P>]
 ```
-
-**Backward compatibility**: Running without a subcommand (e.g. `python -m eos_skill.main --accounts ... --regions ...`) still works and defaults to `scan`.
 
 ## EOS Data Sources
 
