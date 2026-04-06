@@ -73,11 +73,12 @@ The output is JSON, one line per account:
 ```
 
 After getting the regions list:
-1. **Present all discovered regions** to the user
-2. **Ask which regions to scan** — let the user select one, several, or all
-3. If the user says "all" or doesn't narrow down, use all discovered regions
+1. **Present all discovered regions** to the user as a numbered list
+2. **STOP and wait for the user's response.** Ask: "Which regions do you want to scan? Enter region numbers, names, or 'all'."
+3. **Do NOT proceed to Step 2 or Step 3 until the user replies.** This is a mandatory interaction point.
+4. If the user says "all", use all discovered regions. Otherwise, use only the selected ones.
 
-**Do NOT skip this step.** Even if the system prompt lists regions, always run `list-regions` to get the actual enabled regions from the AWS account.
+**CRITICAL: You MUST wait for user input before scanning. Do NOT run list-regions and scan in the same turn. This is a two-turn operation minimum.**
 
 ### Step 2: Verify Prerequisites
 
